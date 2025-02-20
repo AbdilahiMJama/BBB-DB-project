@@ -1,0 +1,14 @@
+#Python version 3.10.16
+numpy
+pandas
+bs4
+requests
+python-whois
+tldextract
+googlesearch-python
+threadpoolexecutorplus
+scikit-learn==1.0.2
+selenium
+pyodbc==4.0.34
+psycopg2-binary
+sqlalchemy
