@@ -1,5 +1,5 @@
 import os
-import connect_iabbb as ci
+import config.connect_iabbb as ci
 import pandas as pd
 
 
