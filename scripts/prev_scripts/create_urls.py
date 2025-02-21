@@ -4,7 +4,7 @@ import re
 import pandas as pd
 import time
 
-from Not_Our_Code.elis_functions import cleanEmail
+from elis_functions import cleanEmail
 from googlesearch import search
 
 
