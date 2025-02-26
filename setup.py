@@ -194,7 +194,29 @@ def getBusinessDataBatch(engine,metadata,scriptId,batchSize=BATCH_SIZE):
             dataFrames[dt.name] = pd.read_sql(slct,con)
     
     return dataFrames
-        
+
+def logProcessedToDB(engine,processedRows,scriptId,activityId):
+    """
+    Inserts the firm_ids processed by this script into the processed firms table
+    
+    processedRows: a dataFrame containing firm_id.  Pass only the rows that were 
+        processed by this script.
+    scriptId: the script's pkey
+    activityId: the script activity id
+    """
+    
+    assert isinstance(processedRows,pd.core.frame.DataFrame)
+    processedRows = processedRows[['firm_id']]
+    processedRows['mnsu_script_id'] = scriptId
+    processedRows['mnsu_script_activity_id'] = activityId
+    
+    processedRows.to_sql(name=PROCESSED_TABLE,
+                         con=engine,
+                         schema=CONNECT_SCHEMA,
+                         if_exists='append',
+                         index=False)
+    
+    
     
 if __name__=='__main__':
     
@@ -217,9 +239,10 @@ if __name__=='__main__':
     #
     
     
-    
-    
-    
+    # Uncomment the next line to test writing the processed firm_ids to DB
+    # Currently this just logs all the firm_ids you pulled    
+#    logProcessedToDB(eng, dfs['tblfirms_firm'], sId, saId)    
+
     terminateScriptActivity(eng, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
     
     
