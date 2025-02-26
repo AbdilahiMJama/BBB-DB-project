@@ -40,8 +40,7 @@ BATCH_SIZE = 300
 
 
 
-# Update these if something goes wrong.  If these are a hassle we
-# can also change the data model (e.g. change to boolean exitedWithErrors)
+# Update these if something goes wrong with the execution
 errorCode = None
 errorText = None
 
@@ -143,12 +142,12 @@ def getBusinessDataBatch(engine,metadata,scriptId,batchSize=BATCH_SIZE):
     batchSize: number of firm_ids to pull
     """
     
+    # Create sqlalchemy table objects
     tmpTableName = 'mnsu_firm_pull_{}'.format(date.today().strftime('%Y%m%d'))
     tmpMeta = sa.schema.MetaData()
     tmpTable = sa.Table(tmpTableName,tmpMeta,
                      sa.Column('firm_id',sa.INTEGER,primary_key=True),
-                     prefixes=['TEMPORARY'])
-    
+                     prefixes=['TEMPORARY'])    
     businessTable = sa.Table(BUSINESS_TABLE,metadata,autoload_with=engine)
     addressTable = sa.Table(ADDRESS_TABLE,metadata,autoload_with=engine)
     nameTable = sa.Table(NAME_TABLE,metadata,autoload_with=engine)
@@ -157,9 +156,10 @@ def getBusinessDataBatch(engine,metadata,scriptId,batchSize=BATCH_SIZE):
     urlTable = sa.Table(URL_TABLE,metadata,autoload_with=engine)
     processedTable = sa.Table(PROCESSED_TABLE,metadata,autoload_with=engine)
             
+    # Timestamp from 1 month ago, used in the pull query
     aMonthAgo = datetime.now() - relativedelta(month=1)
     
-
+    # Query selecting firm_ids
     subq1 = sa.select(1).where(
         businessTable.c.firm_id==urlTable.c.firm_id)
     subq2 = sa.select(1).where(
@@ -173,21 +173,24 @@ def getBusinessDataBatch(engine,metadata,scriptId,batchSize=BATCH_SIZE):
                         businessTable.c.createdon < aMonthAgo).order_by(
                             businessTable.c.createdon.desc()).limit(
                             batchSize)
-    
-    testQ = sa.select(tmpTable.c.firm_id) # debug
+
     with engine.connect() as con:
+        
+        # Insert previous query into a temp table
         tmpTable.create(con)
         ins = sa.insert(tmpTable).from_select([businessTable.c.firm_id],qry)
         con.execute(ins)
-        res = con.execute(testQ)
-        for r in res:
-            print(r)
         
+        # Iterate through data tables
         dataTables = [businessTable,addressTable,nameTable,emailTable,phoneTable,urlTable]
         dataFrames = {}
         for dt in dataTables:
+            
+            # Join each table to the temp table
             dtJoin = sa.join(dt,tmpTable,dt.c.firm_id == tmpTable.c.firm_id)
             slct = sa.select(dt).select_from(dtJoin)
+            
+            # Then write the result to a dataframe
             dataFrames[dt.name] = pd.read_sql(slct,con)
     
     return dataFrames
@@ -202,7 +205,7 @@ if __name__=='__main__':
     # collect script ID / script Activity ID
     sId = getScriptId(eng, mnsuMeta)
     saId = initiateScriptActivity(eng, mnsuMeta)    
-    
+    # dataframes placed in a dictionary
     dfs = getBusinessDataBatch(eng, mnsuMeta, sId)
     
     
