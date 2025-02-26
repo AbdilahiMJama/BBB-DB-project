@@ -8,11 +8,9 @@ Created on Fri Feb 21 10:25:37 2025
 
 import connect_iabbb as ci
 import pandas as pd
-import os, orjson
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 import sqlalchemy as sa
-from sqlalchemy import orm
 
 
 ###################################
@@ -29,9 +27,13 @@ CONNECT_SCHEMA = 'spring2025'
 SCRIPT_TABLE = 'mnsu_script'
 SCRIPT_ACTIVITY_TABLE = 'mnsu_script_activity'
 PROCESSED_TABLE = 'mnsu_firm_processed'
-BATCH_SIZE = 500
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_CONFIG_LOCATION = os.path.join(BASE_DIR,'config','tabinf.json')
+BUSINESS_TABLE = 'tblfirms_firm'
+ADDRESS_TABLE = 'tblfirms_firm_address'
+NAME_TABLE = 'tblfirms_firm_companyname'
+EMAIL_TABLE = 'tblfirms_firm_email'
+PHONE_TABLE = 'tblfirms_firm_phone'
+URL_TABLE = 'tblfirms_firm_url'
+BATCH_SIZE = 300
 
 
 
@@ -129,27 +131,17 @@ def terminateScriptActivity(engine,metadata,activityId,errorCode=None,errorText=
         con.commit()
 
 
-def generateTableObjectsFromConfig(engine,metadata):
-    with open(DATA_CONFIG_LOCATION,'rb') as f:
-        dbDict = orjson.loads(f.read())
-    
-    return {k:sa.Table(v['tableName'],metadata,autoload_with=engine) for k,v in dbDict.items()}
 
-
-
-def getBusinessDataBatch(engine,metadata,dataToPull,scriptId,batchSize=BATCH_SIZE):
+def getBusinessDataBatch(engine,metadata,scriptId,batchSize=BATCH_SIZE):
     """
-    NOTE: this function isn't complete; don't use it just yet.
-    
     Returns a dict of dataframes for the next BATCH_SIZE number of firm_ids to
-    be processed.  The specific dataframes and fields are dictated by the .json
-    at DATA_CONFIG_LOCATION. These dataframes will all share the same firm_ids
+    be processed.  These dataframes will all share the same firm_ids
     
     engine: a sqlalchemy engine object
+    metadata: a sqlalchemy Metadata object
+    scriptId: this script's pkey
     batchSize: number of firm_ids to pull
     """
-    
-#    dbRegistry = orm.registry(metadata=metadata)
     
     tmpTableName = 'mnsu_firm_pull_{}'.format(date.today().strftime('%Y%m%d'))
     tmpMeta = sa.schema.MetaData()
@@ -157,26 +149,48 @@ def getBusinessDataBatch(engine,metadata,dataToPull,scriptId,batchSize=BATCH_SIZ
                      sa.Column('firm_id',sa.INTEGER,primary_key=True),
                      prefixes=['TEMPORARY'])
     
-    dataTables = generateTableObjectsFromConfig(engine, metadata)
-    businessTable = dataTables['business']
-    urlTable = dataTables['url']
+    businessTable = sa.Table(BUSINESS_TABLE,metadata,autoload_with=engine)
+    addressTable = sa.Table(ADDRESS_TABLE,metadata,autoload_with=engine)
+    nameTable = sa.Table(NAME_TABLE,metadata,autoload_with=engine)
+    emailTable = sa.Table(EMAIL_TABLE,metadata,autoload_with=engine)
+    phoneTable = sa.Table(PHONE_TABLE,metadata,autoload_with=engine)
+    urlTable = sa.Table(URL_TABLE,metadata,autoload_with=engine)
     processedTable = sa.Table(PROCESSED_TABLE,metadata,autoload_with=engine)
             
     aMonthAgo = datetime.now() - relativedelta(month=1)
+    
+
+    subq1 = sa.select(1).where(
+        businessTable.c.firm_id==urlTable.c.firm_id)
+    subq2 = sa.select(1).where(
+        sa.and_(businessTable.c.firm_id==processedTable.c.firm_id,
+                processedTable.c.mnsu_script_id==scriptId))
+    qry = sa.select(businessTable.c.firm_id).filter(
+        ~subq1.exists()).filter(
+            ~subq2.exists()).filter(
+                businessTable.c.active).filter(
+                    businessTable.c.outofbusiness_status.is_(None)).filter(
+                        businessTable.c.createdon < aMonthAgo).order_by(
+                            businessTable.c.createdon.desc()).limit(
+                            batchSize)
+    
+    testQ = sa.select(tmpTable.c.firm_id) # debug
+    with engine.connect() as con:
+        tmpTable.create(con)
+        ins = sa.insert(tmpTable).from_select([businessTable.c.firm_id],qry)
+        con.execute(ins)
+        res = con.execute(testQ)
+        for r in res:
+            print(r)
         
-    with orm.Session(engine) as s:
-        tmpMeta.create_all(s.connection(),tables=[tmpTable])
-        subq1 = sa.select(1).where(
-            businessTable.c.firm_id==urlTable.c.firm_id)
-        subq2 = sa.select(1).where(
-            sa.and_(businessTable.c.firm_id==processedTable.c.firm_id,
-                    processedTable.c.mnsu_script_id==scriptId))
-        qry = s.query(businessTable).filter(
-            ~subq1.exists()).filter(
-                ~subq2.exists()).filter(
-                    businessTable.c.active).filter(
-                        businessTable.c.outofbusiness_status.is_(None)).where(
-                            businessTable.c.createdon < aMonthAgo)
+        dataTables = [businessTable,addressTable,nameTable,emailTable,phoneTable,urlTable]
+        dataFrames = {}
+        for dt in dataTables:
+            dtJoin = sa.join(dt,tmpTable,dt.c.firm_id == tmpTable.c.firm_id)
+            slct = sa.select(dt).select_from(dtJoin)
+            dataFrames[dt.name] = pd.read_sql(slct,con)
+    
+    return dataFrames
         
     
 if __name__=='__main__':
@@ -189,16 +203,15 @@ if __name__=='__main__':
     sId = getScriptId(eng, mnsuMeta)
     saId = initiateScriptActivity(eng, mnsuMeta)    
     
+    dfs = getBusinessDataBatch(eng, mnsuMeta, sId)
     
     
     
     
     
-    
-    
-    
-    
-    
+    #
+    #  everything else goes here:
+    #
     
     
     
