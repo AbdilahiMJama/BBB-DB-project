@@ -166,7 +166,7 @@ def getBusinessDataBatch(engine,metadata,scriptId,batchSize=BATCH_SIZE):
         sa.and_(businessTable.c.firm_id==processedTable.c.firm_id,
                 processedTable.c.mnsu_script_id==scriptId))
     qry = sa.select(businessTable.c.firm_id).filter(
-        subq1.exists()).filter(
+        ~subq1.exists()).filter(
             ~subq2.exists()).filter(
                 businessTable.c.active).filter(
                     businessTable.c.outofbusiness_status.is_(None)).filter(
