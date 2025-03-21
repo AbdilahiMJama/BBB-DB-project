@@ -3,7 +3,8 @@
 import re
 import pandas as pd
 import time
-
+import requests
+from bs4 import BeautifulSoup
 from elis_functions import cleanEmail
 from googlesearch import search
 
@@ -24,7 +25,7 @@ We have two functions which build new urls for us
 """
 
 # list of domain names we don't want
-bad_domain_names = ['yahoo.com', 'gmail.com', "hotmail.com", "icloud.com", "comcast.net", "GMAIL.COM",
+bad_domain_names = ['yahoo.com', 'gmail.com', "hotmail.com", "icloud.com", "comcast.net", "GMAIL.COM", "ICLOUD.COM",
                     "outlook.com", "msn.com", "arvig.net", "charter.net", "winona.edu", "aol.com", "frontier.net",
                     "frontiernet.net", "results.net"]
 
@@ -62,9 +63,9 @@ def search_urls(df):
     for index, row in df.iterrows():
         business_name = df.loc[index, "BusinessName"]
         business_city = df.loc[index, 'City']
-        business_id = df.loc[index, 'BusinessID']
+        business_id = df.loc[index, 'BusinessId']
         business_id, website = get_url_from_search(business_name, rating_sites, business_id, business_city)
-        df.loc[df['BusinessID'] == business_id]['Website'] = website
+        df.loc[df['BusinessId'] == business_id]['Website'] = website
         results.append(website)
         time.sleep(10)
 
@@ -77,14 +78,18 @@ def get_url_from_search(company_name, rating_sites, business_id, company_city_st
     :param company_name: the name of the company
     :return: company's URL if found, else return ''
     """
+    website = ""
     if pd.isnull(company_city_state):
         company_city_state = ""
-    term = ' '.join([company_name, company_city_state])
+    term = company_name
     try:
         for j in search(term, num_results=5):
             if filter(j, rating_sites):
-                print(company_name, business_id, j)
-                return j
+                #print(company_name, business_id, j)
+                if j:
+                    website = j
+                    print(website)
+                return website
             else:
                 continue
     except:
@@ -92,8 +97,34 @@ def get_url_from_search(company_name, rating_sites, business_id, company_city_st
         time.sleep(45 * 60 * 1.2)
     finally:
         print("Search completed")
-        return None
+        print(website)
+        return website, business_id
 
+### TESTING ###
+def test_search_urls(company_name, ratings, business_id, company_city_state=""):
+    """
+    Return company's URL given company name
+    :param company_name: the name of the company
+    :return: company's URL if found, else return ''
+    """
+    search = company_name
+    url = 'https://www.google.com/search'
+    headers = {
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/74.0.3729.169 Safari/537.36 '
+    }
+    params = {'q'  : search}
+    content = requests.get(url, headers=headers, params=params).text
+    soup = BeautifulSoup(content, 'html.parser')
+    search = soup.find(id='search')
+    first_link = search.find('a')
+    print(first_link)
+    if filter(first_link, ratings):
+        return first_link, business_id
+    else:
+        return company_name, business_id
 
 def filter(url, rating_sites):
     """
@@ -124,3 +155,4 @@ def extract_domain_name(url):
         return
     else:
         return url
+    

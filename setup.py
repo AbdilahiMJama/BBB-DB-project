@@ -217,8 +217,9 @@ def logProcessedToDB(engine,processedRows,scriptId,activityId):
                          index=False)
     
     
-    
+'''   
 if __name__=='__main__':
+    
     
     # Instantiate sqlalchemy engine
     eng = ci.connect(db=CONNECT_DB,instance=CONNECT_INSTANCE,user=CONNECT_USER,engine='sqlalchemy')    
@@ -245,5 +246,5 @@ if __name__=='__main__':
 
     terminateScriptActivity(eng, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
     
-    
+'''
     
