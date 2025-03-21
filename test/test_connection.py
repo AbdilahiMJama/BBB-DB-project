@@ -39,7 +39,7 @@ con = ci.connect(db='MNSU', instance='SANDBOX', user='ABDI', engine='sqlalchemy'
 
 metadata_obj = MetaData()
 metadata_obj.reflect(bind=con)
-test = getBusinessDataBatch(con,metadata_obj,None,10)
+test = getBusinessDataBatch(con,metadata_obj,None,300)
 
 print(test.keys())
 
@@ -53,28 +53,15 @@ url_df = test[URL_TABLE][['firm_id', 'url']]
 
 
 business_email_df = pd.merge(name_df, email_df, on='firm_id', how='inner')
-business_email_df = pd.merge(business_email_df, url_df, on='firm_id', how='inner')
+business_email_df = pd.merge(business_email_df, url_df, on='firm_id', how='left')
 
 business_email_df.rename(columns={'firm_id':'BusinessId','company_name':'BusinessName','email':'Email','url':'Website'}, inplace=True)
 #business_email_df = business_email_df['Website']
 
-print(business_email_df.head())
+print(business_email_df)
+update_df = main_scrape_urls(business_email_df)
+print(update_df)
 
 
 
-#merged_df = pd.merge(business_df, name_df, on='firm_id', how='left')
-#merged_df = pd.merge(merged_df, email_df, on='firm_id', how='inner')
-#merged_df = pd.merge(merged_df, url_df, on='firm_id', how='left')
-#merged_df = pd.merge(merged_df, address_df, on='firm_id', how='left')
-
-#print(business_email_df[business_email_df.duplicated()])
-#print(business_email_df.head())
-#merged_df = pd.merge(merged_df, phone_df, on='firm_id', how='left')
-#
- 
-#merged_df.rename(columns={'company_name':'BusinessName','email':'Email','url':'Website','firm_id':'BusinessId','zip': 'PostalCode'}, inplace=True)
-#print(merged_df[['BusinessId','BusinessName','Email','Website']])
-
-#update_df = main_scrape_urls(merged_df)
-#print(update_df[['BusinessName','Website']])
 

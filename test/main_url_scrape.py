@@ -30,8 +30,7 @@ def main_scrape_urls(df):
     # If the status code is 200, update the 'Website' column of the input dataframe with the valid URL
     df = df.loc[df['status_code'] == 200]
     return df
-
-
+''''
 def scrape_urls_emails(df):
     for index, row in df.iterrows():
         # Check if the row already has a valid URL
@@ -50,7 +49,7 @@ def scrape_urls_emails(df):
         # If the status code is 200, update the 'Website' column of the input dataframe with the valid URL
         df = df.loc[df['status_code'] == 200]
         return df
-
+'''
 
 def url_exists(row):
     """
@@ -98,9 +97,9 @@ def url_from_business_name(row):
                     'buildzoom', 'buzzfile', 'manta', 'dandb', 'bloomberg', 'nextdoor', 'dnb', 'homeadvisor']
     business_name = row['BusinessName']
     business_id = row['BusinessId']
-    company_city_state = row['PostalCode']
+    #company_city_state = row['PostalCode']
     if isinstance(business_name, str):
-        website, business_id = get_url_from_search(business_name, rating_sites, business_id, company_city_state)
+        website, business_id = get_url_from_search(business_name, rating_sites, business_id)
         if website:
             print(website)
             return website
