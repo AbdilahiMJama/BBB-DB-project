@@ -25,7 +25,8 @@ Build and improve upon a project built started by a previous team which attempte
 | Improvements to URL generation | Leverage google searches to find the correct URLS for businesses | BBB business data tables, google search | ML, Python | Medium|
 | Improvements to web scraping | Scraping websites to fit into broad pattern recognition or markers withing the site's HTML | BBB business data tables, relevant python packages | Python, googlesearch, data engineering | Medium |
 
-## **Folder Structure**
+##  **Folder Structure**
+
 
 
 
