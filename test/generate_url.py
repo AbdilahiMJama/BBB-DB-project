@@ -30,9 +30,9 @@ URL_TABLE = 'tblfirms_firm_url'
 GENERATED_URL_TABLE = 'mnsu_generated_firm_url'
 BATCH_SIZE = 50
 MNSU_URL_ID = 1
-MNSU_SCRIPT_ACTIVITY = None
 
-
+errorCode = 42804
+errorText = 'Datatype mismatch'
 
 def getDomainName(url):
     """   
@@ -57,12 +57,11 @@ def getDomainName(url):
 def setUrlType(df):
     pass
 
-'''
-def getExisitingUrlId(engine, metadata, scriptTable=None):
+
+def getExistingUrlId(engine, metadata, saId, scriptTable=None):
     if scriptTable==None:
         scriptTable = sa.Table(GENERATED_URL_TABLE,metadata,autoload_with=engine)
-    qry = sa.select(scriptTable).filter_by(mnsu_url_id=MNSU_URL_ID, 
-                                        mnsu_script_actvity=MNSU_SCRIPT_ACTIVITY)
+    qry = sa.select(scriptTable).filter_by(mnsu_url_id=MNSU_URL_ID, mnsu_script_activity_id=saId)
 
     with engine.connect() as con:
         res = con.execute(qry)
@@ -71,7 +70,7 @@ def getExisitingUrlId(engine, metadata, scriptTable=None):
             return False
         return next(res)[0]
 
-def getUrlId(engine, metadata):
+def getUrlId(engine, metadata,saId):
     """
     Returns the primary key associated with the current script name and 
     version, or false if none exists
@@ -83,18 +82,19 @@ def getUrlId(engine, metadata):
         table object will be updated from the database
     """
     scriptTable = sa.Table(GENERATED_URL_TABLE,metadata,autoload_with=engine)
-    if (script_id:=getExistingScriptId(engine,metadata,scriptTable=scriptTable)):
+    if (script_id:=getExistingUrlId(engine,metadata,saId,scriptTable=scriptTable)):
         return script_id
     
     with engine.connect() as con:
-        qry = sa.insert(scriptTable).returning(scriptTable.c.mnsu_script_id)
-        params = {'mnsu_url_id':MNSU_URL_ID, 'mnsu_script_activity':MNSU_SCRIPT_ACTIVITY}
+        qry = sa.insert(scriptTable).returning(scriptTable.c.mnsu_url_id)
+        params = {'mnsu_url_id':MNSU_URL_ID, 'mnsu_script_activity_id':saId}
         res = con.execute(qry,params)
         con.commit()
+        print(next(res)[0])
         return next(res)[0]
-'''
 
-def logGeneratedUrlToDB(engine,processedRows, saId):
+
+def logGeneratedUrlToDB(engine,processedRows,saId):
     """
     Log the generated urls to the database
     :param engine: sqlalchemy engine
@@ -105,68 +105,75 @@ def logGeneratedUrlToDB(engine,processedRows, saId):
     :return: None
     """
     columns = {'BusinessId':'firm_id','Website':'url'}
+    
     assert isinstance(processedRows,pd.core.frame.DataFrame)
-    processedRows['mnsu_url_id'] = 1
-    processedRows['mnsu_script_activity_id'] = saId
+    
+        
     processedRows.rename(columns=columns, inplace=True)
     processedRows = processedRows[['firm_id','url','domain', 'main', 'url_type_id', 'url_status_id']]
+    
+    # issue here, it adds the url and script_activity_id but fails to add the rest of the columns
+    processedRows['mnsu_url_id'] = getUrlId(engine, mnsuMeta, saId)
+    processedRows['mnsu_script_activity_id'] = saId
     processedRows['note'] = 'Testing generated URLs'
     processedRows['confidence_level'] = 1
-    
     print(processedRows.columns)
-    
-    
-    
-    processedRows.to_sql(name=GENERATED_URL_TABLE,
-                         con=engine,
-                         schema=CONNECT_SCHEMA,
-                         if_exists='append',
-                         index=False)
-    
 
-#logProcessedToDB(con, update_df, sId, saId)
-#logGeneratedUrlToDB(con, update_df)
-#terminateScriptActivity(eng, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
+    print(processedRows[['mnsu_url_id','mnsu_script_activity_id','firm_id','url']])
+    '''
+    finally:
+        processedRows.to_sql(name=GENERATED_URL_TABLE,
+                                con=engine,
+                                schema=CONNECT_SCHEMA,
+                                if_exists='append',
+                                index=False)
+    '''
+
 
 if __name__=='__main__':
     
+    # Load Environment Variables
     load_dotenv()
     # Create connection
     con = ci.connect(db='MNSU', instance='SANDBOX', user='ABDI', engine='sqlalchemy')
 
-
-    metadata_obj = MetaData()
-    metadata_obj.reflect(bind=con)
+   # Create a metadata object
+    mnsuMeta = sa.schema.MetaData(schema=CONNECT_SCHEMA)
       
-    # Build DB metadata object
-    sId = getScriptId(con, metadata_obj)
-    saId = initiateScriptActivity(con, metadata_obj) 
+    # Get the script ID and script activity ID
+    sId = getScriptId(con, mnsuMeta)
+    saId = initiateScriptActivity(con, mnsuMeta,sId) 
 
-    dfs = getBusinessDataBatch(con,metadata_obj,None,50) 
+    # Get the business data
+    dfs = getBusinessDataBatch(con,mnsuMeta,None,50) 
 
-    
+    # Get the email, name and url tables as a dataframe from the batch
     email_df = dfs[EMAIL_TABLE][['firm_id', 'email']]
     name_df = dfs[NAME_TABLE][['firm_id', 'company_name']]
     url_df = dfs[URL_TABLE][['firm_id', 'url','main','url_type_id','url_status_id']]
 
+    # Merge the three dataframes on their firm id
     business_email_df = pd.merge(name_df, email_df, on='firm_id', how='inner')
     business_email_df = pd.merge(business_email_df, url_df, on='firm_id', how='left')
 
+    # Rename the columns to match the convention for the function main_scrape_urls.
     business_email_df.rename(columns={'firm_id':'BusinessId','company_name':'BusinessName','email':'Email','url':'Website'}, inplace=True)
 
     print(business_email_df[['BusinessId','BusinessName','url_type_id','url_status_id']])
+    # Update the dataframe with the new urls that have been generated from email and business name.
     update_df = main_scrape_urls(business_email_df)
-    print(update_df[['BusinessId','Website','status_code']])
+    #print(update_df[['BusinessId','Website','status_code']])
 
+    # Extract the domain name from the url and update the url_status_id column
     update_df['domain'] = update_df['Website'].apply(getDomainName)
     update_df['url_status_id'] = update_df['status_code'].apply(lambda x: 1 if x == 200 else 3)
-    print(update_df[['Website','status_code','domain','url_status_id']])
-
+    
+    # Rename the columns to match the convention for the function logGeneratedUrlToDB
+    update_df.rename(columns={'BusinessId':'firm_id','Website':'url'}, inplace=True)
+    print(update_df[['firm_id','url','status_code','domain','url_status_id']])
     
     logGeneratedUrlToDB(con, update_df, saId)
 
-    logProcessedToDB(con, update_df, sId, saId)
+    #terminateScriptActivity(con, mnsuMeta, saId, errorCode=23502, errorText='Not Null Violation on firm_id')
 
-
-    terminateScriptActivity(con, metadata_obj, saId, errorCode=None, errorText=None)
-
+    #logProcessedToDB(con, update_df, sId, saId)
