@@ -94,7 +94,7 @@ def get_url_from_search(company_name, rating_sites, business_id, company_city_st
                 continue
     except:
         print("Encounted Time Error")
-        time.sleep(45 * 60 * 1.2)
+        time.sleep(5)
     finally:
         print("Search completed")
         print(website)
