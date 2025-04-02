@@ -18,7 +18,8 @@ import sqlalchemy as sa
 ###################################
 
 SCRIPT_NAME = 'data_quality_s2025'
-SCRIPT_VERSION = '1.0.1'
+# increment this when running a new script version.
+SCRIPT_VERSION = '1.0.2'
 VERSION_NOTE = None         # put version note string here if desired, otherwise None
 CONNECT_USER = 'ABDI'
 CONNECT_DB = 'MNSU'
@@ -173,7 +174,6 @@ def getBusinessDataBatch(engine,metadata,scriptId,batchSize=BATCH_SIZE):
                         businessTable.c.createdon < aMonthAgo).order_by(
                             businessTable.c.createdon.desc()).limit(
                             batchSize)
-
     with engine.connect() as con:
         
         # Insert previous query into a temp table
@@ -217,7 +217,7 @@ def logProcessedToDB(engine,processedRows,scriptId,activityId):
                          index=False)
     
     
-'''   
+  
 if __name__=='__main__':
     
     
@@ -242,9 +242,9 @@ if __name__=='__main__':
     
     # Uncomment the next line to test writing the processed firm_ids to DB
     # Currently this just logs all the firm_ids you pulled    
-#    logProcessedToDB(eng, dfs['tblfirms_firm'], sId, saId)    
+    logProcessedToDB(eng, dfs['tblfirms_firm'], sId, saId)    
 
     terminateScriptActivity(eng, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
     
-'''
+
     

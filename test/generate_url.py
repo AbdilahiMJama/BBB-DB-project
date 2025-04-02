@@ -11,10 +11,10 @@ from urllib.parse import urlparse
 from create_urls import extract_domain_name
 import sqlalchemy as sa
 
+### For the url type (later use) use a dictionary.
 
-
-SCRIPT_NAME = 'generating_urls_for_ten_test_s2025'
-SCRIPT_VERSION = '1.0'
+SCRIPT_NAME = 'generating_urls_test_s2025'
+SCRIPT_VERSION = '1.0.2'
 VERSION_NOTE = None         # put version note string here if desired, otherwise None
 CONNECT_USER = 'ABDI'
 CONNECT_DB = 'MNSU'
@@ -58,43 +58,7 @@ def setUrlType(df):
     pass
 
 
-def getExistingUrlId(engine, metadata, saId, scriptTable=None):
-    if scriptTable==None:
-        scriptTable = sa.Table(GENERATED_URL_TABLE,metadata,autoload_with=engine)
-    qry = sa.select(scriptTable).filter_by(mnsu_url_id=MNSU_URL_ID, mnsu_script_activity_id=saId)
-
-    with engine.connect() as con:
-        res = con.execute(qry)
-
-        if res.rowcount==0:
-            return False
-        return next(res)[0]
-
-def getUrlId(engine, metadata,saId):
-    """
-    Returns the primary key associated with the current script name and 
-    version, or false if none exists
-    
-    engine: a sqlalchemy engine
-    metadata: a sqlalchemy Metadata object
-    scriptTable: (optional) a Table object for the script table. This will be 
-        generated if not present, but if passed as a keyword argument, the 
-        table object will be updated from the database
-    """
-    scriptTable = sa.Table(GENERATED_URL_TABLE,metadata,autoload_with=engine)
-    if (script_id:=getExistingUrlId(engine,metadata,saId,scriptTable=scriptTable)):
-        return script_id
-    
-    with engine.connect() as con:
-        qry = sa.insert(scriptTable).returning(scriptTable.c.mnsu_url_id)
-        params = {'mnsu_url_id':MNSU_URL_ID, 'mnsu_script_activity_id':saId}
-        res = con.execute(qry,params)
-        con.commit()
-        print(next(res)[0])
-        return next(res)[0]
-
-
-def logGeneratedUrlToDB(engine,processedRows,saId):
+def logGeneratedUrlToDB(engine,processedRows,metadata,saId):
     """
     Log the generated urls to the database
     :param engine: sqlalchemy engine
@@ -112,23 +76,31 @@ def logGeneratedUrlToDB(engine,processedRows,saId):
     processedRows.rename(columns=columns, inplace=True)
     processedRows = processedRows[['firm_id','url','domain', 'main', 'url_type_id', 'url_status_id']]
     
-    # issue here, it adds the url and script_activity_id but fails to add the rest of the columns
-    processedRows['mnsu_url_id'] = getUrlId(engine, mnsuMeta, saId)
-    processedRows['mnsu_script_activity_id'] = saId
-    processedRows['note'] = 'Testing generated URLs'
-    processedRows['confidence_level'] = 1
-    print(processedRows.columns)
 
-    print(processedRows[['mnsu_url_id','mnsu_script_activity_id','firm_id','url']])
-    '''
-    finally:
-        processedRows.to_sql(name=GENERATED_URL_TABLE,
+    # issue here, it adds the url and script_activity_id but fails to add the rest of the columns
+    processedRows[['mnsu_script_activity_id']] = saId
+    processedRows[['note']] = 'Testing generated URLs'
+    processedRows[['confidence_level']] = 1
+    #print(processedRows.columns)
+    generated_urltable = sa. Table(GENERATED_URL_TABLE, metadata, autoload=True, autoload_with=engine)
+    processed_table = sa.Table(PROCESSED_TABLE, metadata, autoload=True, autoload_with=engine)
+
+    
+    processedRows.to_sql(name=GENERATED_URL_TABLE,
                                 con=engine,
                                 schema=CONNECT_SCHEMA,
                                 if_exists='append',
                                 index=False)
-    '''
+    
+    qry = sa.select().where()
+    
+# Query for the firm_id     
+#subq2 = sa.select(1).where(
+#sa.and_(businessTable.c.firm_id==processedTable.c.firm_id,
+#               processedTable.c.mnsu_script_id==scriptId))
 
+# Insert into script id table and mnsu_firm_processed table. Adds duplicate firm_ids. How to handle this.
+# add a function to check if the firm_id exists? Shouldn't the processed table be handling this.
 
 if __name__=='__main__':
     
@@ -143,7 +115,7 @@ if __name__=='__main__':
     # Get the script ID and script activity ID
     sId = getScriptId(con, mnsuMeta)
     saId = initiateScriptActivity(con, mnsuMeta,sId) 
-
+    print(sId)
     # Get the business data
     dfs = getBusinessDataBatch(con,mnsuMeta,None,50) 
 
@@ -174,6 +146,7 @@ if __name__=='__main__':
     
     logGeneratedUrlToDB(con, update_df, saId)
 
-    #terminateScriptActivity(con, mnsuMeta, saId, errorCode=23502, errorText='Not Null Violation on firm_id')
+    terminateScriptActivity(con, mnsuMeta, saId, errorCode=23502, errorText='Not Null Violation on firm_id')
 
-    #logProcessedToDB(con, update_df, sId, saId)
+    logProcessedToDB(con, update_df, sId, saId)
+    
