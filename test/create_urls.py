@@ -61,11 +61,11 @@ def search_urls(df):
                     'menupix', 'buildzoom', 'buzzfile', 'manta', 'dandb', 'bloomberg', 'nextdoor', 'dnb', 'homeadvisor']
 
     for index, row in df.iterrows():
-        business_name = df.loc[index, "BusinessName"]
-        business_city = df.loc[index, 'City']
-        business_id = df.loc[index, 'BusinessId']
+        business_name = df.loc[index, "company_name"]
+        business_city = df.loc[index, 'city']
+        business_id = df.loc[index, 'firm_id']
         business_id, website = get_url_from_search(business_name, rating_sites, business_id, business_city)
-        df.loc[df['BusinessId'] == business_id]['Website'] = website
+        df.loc[df['firm_id'] == business_id]['email'] = website
         results.append(website)
         time.sleep(10)
 
@@ -100,31 +100,6 @@ def get_url_from_search(company_name, rating_sites, business_id, company_city_st
         print(website)
         return website, business_id
 
-### TESTING ###
-def test_search_urls(company_name, ratings, business_id, company_city_state=""):
-    """
-    Return company's URL given company name
-    :param company_name: the name of the company
-    :return: company's URL if found, else return ''
-    """
-    search = company_name
-    url = 'https://www.google.com/search'
-    headers = {
-        'Accept': '*/*',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/74.0.3729.169 Safari/537.36 '
-    }
-    params = {'q'  : search}
-    content = requests.get(url, headers=headers, params=params).text
-    soup = BeautifulSoup(content, 'html.parser')
-    search = soup.find(id='search')
-    first_link = search.find('a')
-    print(first_link)
-    if filter(first_link, ratings):
-        return first_link, business_id
-    else:
-        return company_name, business_id
 
 def filter(url, rating_sites):
     """

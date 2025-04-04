@@ -58,7 +58,7 @@ def setUrlType(df):
     pass
 
 
-def logGeneratedUrlToDB(engine,processedRows,metadata,saId):
+def logGeneratedUrlToDB(engine,processedRows,saId):
     """
     Log the generated urls to the database
     :param engine: sqlalchemy engine
@@ -68,22 +68,23 @@ def logGeneratedUrlToDB(engine,processedRows,metadata,saId):
     :
     :return: None
     """
-    columns = {'BusinessId':'firm_id','Website':'url'}
+    #columns = {'BusinessId':'firm_id','Website':'url'}
     
     assert isinstance(processedRows,pd.core.frame.DataFrame)
     
         
-    processedRows.rename(columns=columns, inplace=True)
+    #processedRows.rename(columns=columns, inplace=True)
     processedRows = processedRows[['firm_id','url','domain', 'main', 'url_type_id', 'url_status_id']]
     
 
     # issue here, it adds the url and script_activity_id but fails to add the rest of the columns
+    # pull 1000 rows at a time and then put all into one dataframe
+    # process it 
+    # push it to the table, 1000 rows at a time and we keep track of the rows, 1000, 1001
     processedRows[['mnsu_script_activity_id']] = saId
     processedRows[['note']] = 'Testing generated URLs'
     processedRows[['confidence_level']] = 1
     #print(processedRows.columns)
-    generated_urltable = sa. Table(GENERATED_URL_TABLE, metadata, autoload=True, autoload_with=engine)
-    processed_table = sa.Table(PROCESSED_TABLE, metadata, autoload=True, autoload_with=engine)
 
     
     processedRows.to_sql(name=GENERATED_URL_TABLE,
@@ -92,7 +93,6 @@ def logGeneratedUrlToDB(engine,processedRows,metadata,saId):
                                 if_exists='append',
                                 index=False)
     
-    qry = sa.select().where()
     
 # Query for the firm_id     
 #subq2 = sa.select(1).where(
@@ -115,11 +115,13 @@ if __name__=='__main__':
     # Get the script ID and script activity ID
     sId = getScriptId(con, mnsuMeta)
     saId = initiateScriptActivity(con, mnsuMeta,sId) 
-    print(sId)
+    #print(sId)
     # Get the business data
+    
     dfs = getBusinessDataBatch(con,mnsuMeta,None,50) 
 
     # Get the email, name and url tables as a dataframe from the batch
+    # Put a business dataframe (BUSINESS_TABLE), return this table to logProcessedToDB
     email_df = dfs[EMAIL_TABLE][['firm_id', 'email']]
     name_df = dfs[NAME_TABLE][['firm_id', 'company_name']]
     url_df = dfs[URL_TABLE][['firm_id', 'url','main','url_type_id','url_status_id']]
@@ -128,25 +130,34 @@ if __name__=='__main__':
     business_email_df = pd.merge(name_df, email_df, on='firm_id', how='inner')
     business_email_df = pd.merge(business_email_df, url_df, on='firm_id', how='left')
 
-    # Rename the columns to match the convention for the function main_scrape_urls.
-    business_email_df.rename(columns={'firm_id':'BusinessId','company_name':'BusinessName','email':'Email','url':'Website'}, inplace=True)
+    
 
-    print(business_email_df[['BusinessId','BusinessName','url_type_id','url_status_id']])
+    print(business_email_df[['firm_id','company_name','url_type_id','url_status_id']])
+
+    
     # Update the dataframe with the new urls that have been generated from email and business name.
+    # Add the processed rows to the dataframe.
+    # Filter out for the generated urls to the generated_url table.
+    # Include the urls even if they don't exist.
     update_df = main_scrape_urls(business_email_df)
-    #print(update_df[['BusinessId','Website','status_code']])
+    print(update_df[['firm_id','url','status_code']])
+
 
     # Extract the domain name from the url and update the url_status_id column
-    update_df['domain'] = update_df['Website'].apply(getDomainName)
+    update_df['domain'] = update_df['url'].apply(getDomainName)
     update_df['url_status_id'] = update_df['status_code'].apply(lambda x: 1 if x == 200 else 3)
-    
+        
     # Rename the columns to match the convention for the function logGeneratedUrlToDB
-    update_df.rename(columns={'BusinessId':'firm_id','Website':'url'}, inplace=True)
+    #update_df.rename(columns={'BusinessId':'firm_id','Website':'url'}, inplace=True)
     print(update_df[['firm_id','url','status_code','domain','url_status_id']])
+
+    print(update_df.duplicated())
+    #updatedf = update_df.drop_duplicates(subset=['firm_id'], keep='last')
     
     logGeneratedUrlToDB(con, update_df, saId)
 
-    terminateScriptActivity(con, mnsuMeta, saId, errorCode=23502, errorText='Not Null Violation on firm_id')
 
     logProcessedToDB(con, update_df, sId, saId)
-    
+
+    # 20k 1k rows at a time
+    terminateScriptActivity(con, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
