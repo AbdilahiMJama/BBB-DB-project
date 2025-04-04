@@ -122,6 +122,7 @@ if __name__=='__main__':
 
     # Get the email, name and url tables as a dataframe from the batch
     # Put a business dataframe (BUSINESS_TABLE), return this table to logProcessedToDB
+    business_df = dfs[BUSINESS_TABLE][['firm_id']]
     email_df = dfs[EMAIL_TABLE][['firm_id', 'email']]
     name_df = dfs[NAME_TABLE][['firm_id', 'company_name']]
     url_df = dfs[URL_TABLE][['firm_id', 'url','main','url_type_id','url_status_id']]
@@ -157,7 +158,7 @@ if __name__=='__main__':
     logGeneratedUrlToDB(con, update_df, saId)
 
 
-    logProcessedToDB(con, update_df, sId, saId)
+    logProcessedToDB(con, business_df, sId, saId)
 
     # 20k 1k rows at a time
     terminateScriptActivity(con, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
