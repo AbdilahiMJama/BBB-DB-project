@@ -7,7 +7,7 @@ import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import MetaData
 from main_url_scrape import main_scrape_urls
-from data_extraction import extract_email_data, extract_phone_data
+from data_extraction import extract_email_data, extract_phone_data, contains_phone_number
 
 
 
@@ -83,12 +83,17 @@ for url in url_df['url']:
 # for url in url_df['url']:
 #     #print(url)
 #     #main_scrape_urls(url)
-#     scrapedPhone = extract_phone_data(00000, url)
+#     scrapedPhone = extract_phone_data(0000, url)
 #     print(scrapedPhone)
+#     print()
 
-scrapedPhone = extract_phone_data(00000, "https://www.jodcpa.com/")
+scrapedPhone = extract_email_data(00000,"https://dmv.colorado.gov/contact-us-dmv")
+scrapedPhone2 = extract_phone_data(0000, "https://dmv.colorado.gov/contact-us-dmv")
+#containsPhoneNum = contains_phone_number("https://dmv.colorado.gov/contact-us-dmv",'3032055600' )
+
 print(scrapedPhone)
-
+print(scrapedPhone2)
+#print(containsPhoneNum)
 
 
 # # Perform a left merge to get firms with URLs

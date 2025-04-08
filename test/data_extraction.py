@@ -269,7 +269,6 @@ def url_is_review_page(url):
 def extract_phone_data(business_id, url):
     """
     Finds phone numbers in the given url's webpage
-    :param business_id: id associated with a business
     :param url: url to search for phone numbers in
     :return: dictionary of all phone numbers found in the given url's webpage
     """
@@ -283,9 +282,12 @@ def extract_phone_data(business_id, url):
     phone_numbers = []
     counter = 0
     try:
-        for tag in soup.find_all(text=re.compile(r'(?\d{3})?[-.\s]?\d{3}[-.\s]?\d{4}')):
+
+        for tag in soup.find_all(text=re.compile(r'(?:\+1\s*)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}')):
             counter += 1
-            phone_numbers.append(tag.string)
+            cleaned_number = re.sub(r'[^\d]', '', tag.string)  # Remove non-digit characters
+            if len(cleaned_number) == 10 or (len(cleaned_number) == 11 and cleaned_number.startswith('1')):
+                phone_numbers.append(cleaned_number)
     except:
         return None
     if len(phone_numbers) >= 1:
