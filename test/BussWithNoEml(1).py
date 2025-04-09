@@ -74,49 +74,47 @@ url_df = test[URL_TABLE][['firm_id', 'url']]
 # print("\nURL DataFrame:")
 # print(url_df)
 
-for url in url_df['url']:
-    #print(url)
-    #main_scrape_urls(url)
-    scrapedEmail = extract_email_data(00000, url)
-    print(scrapedEmail)
-
-# for url in url_df['url']:
-#     #print(url)
-#     #main_scrape_urls(url)
-#     scrapedPhone = extract_phone_data(0000, url)
-#     print(scrapedPhone)
-#     print()
-
-scrapedPhone = extract_email_data(00000,"https://dmv.colorado.gov/contact-us-dmv")
-scrapedPhone2 = extract_phone_data(0000, "https://dmv.colorado.gov/contact-us-dmv")
-#containsPhoneNum = contains_phone_number("https://dmv.colorado.gov/contact-us-dmv",'3032055600' )
-
-print(scrapedPhone)
-print(scrapedPhone2)
-#print(containsPhoneNum)
 
 
-# # Perform a left merge to get firms with URLs
-# business_url_df = pd.merge(business_df, url_df, on='firm_id', how='left')
 
-# # Filter out firms that have emails
-# business_url_df = business_url_df[~business_url_df['firm_id'].isin(email_df['firm_id'])]
+def emlScrape(urlDf, emlDf):
+    """
+    Scrapes email from a given URL using the extract_email_data function.
+    
+    Args:
+        urlDf (pd.DataFrame): DataFrame containing URLs.
+        emlDf (pd.DataFrame): DataFrame to store scraped email addresses.
+        
+    """
 
-# # Merge with other DataFrames to include additional information
-# business_url_df = pd.merge(business_url_df, name_df, on='firm_id', how='left')
-# business_url_df = pd.merge(business_url_df, address_df, on='firm_id', how='left')
-# business_url_df = pd.merge(business_url_df, phone_df, on='firm_id', how='left')
-# business_url_df = pd.merge(business_url_df, email_df, on='firm_id', how='left')  # Include email_df
+    for index, row in urlDf.iterrows():
+        # print(row[1])
+        # print(type(row[1]))
+        url = row['url']
+        firm_id = row['firm_id']
+        
+        # Scrape email data
+        scrapedEmail = extract_email_data(firm_id, url)
+        print(scrapedEmail, url)
+        
+        # Append the scraped emails to the email DataFrame
+        # for now, we're only considering 2 emails per firm ID
+        i = 0
+        while i < 2 and scrapedEmail != None and  i < len(scrapedEmail):
+            # Check if the email is already in the DataFrame
+            if scrapedEmail[i] not in emlDf['email'].values:
+                print(True)
+                # Create a new row as a DataFrame
+                new_row = pd.DataFrame({'firm_id': [firm_id], 'email': [scrapedEmail[i]]})
+                
+                # Use pd.concat() to append the new row
+                emlDf = pd.concat([emlDf, new_row], ignore_index=True)
 
-# # Rename columns for clarity
-# business_url_df.rename(columns={
-#     'firm_id': 'BusinessId',
-#     'company_name': 'BusinessName',
-#     'url': 'Website',
-#     'zip': 'ZipCode',
-#     'phone': 'Phone',
-#     'email': 'Email'  # Rename email column
-# }, inplace=True)
+                i += 1
+            else: 
+                i += 1
+                continue
 
-# # Display the resulting DataFrame
-# print(business_url_df)
+    return emlDf
+        
+print(emlScrape(url_df, email_df))

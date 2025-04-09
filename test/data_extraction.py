@@ -1,5 +1,5 @@
 import bs4
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 import requests
 import re
 import whois
@@ -301,7 +301,7 @@ def extract_email_data(business_id, url):
     Finds email addresses in the given url's webpage
     :param business_id: id associated with a business
     :param url: url to search for emails in
-    :return: dictionary of all emails found in the given url's webpage
+    :return: list of all valid emails found in the given url's webpage
     """
     try:
         response = requests.get(url)
@@ -315,10 +315,17 @@ def extract_email_data(business_id, url):
     for tag in soup.find_all('a'):
         email = tag.get('href')
         if email and 'mailto:' in email:
-            if email in email_addresses:
-                continue
-            email_number += 1
-            email_addresses.append(email)
+            email = email[7:]  # Remove the 'mailto:' prefix
+            email = email.split('?')[0]  # Remove query strings if present
+            
+            # Use regex to validate and clean the email address
+            match = re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', email)
+            if match:
+                cleaned_email = match.group(0)  # Extract the valid email address
+                if cleaned_email not in email_addresses:  # Avoid duplicates
+                    email_number += 1
+                    email_addresses.append(cleaned_email)
+
     if len(email_addresses) >= 1:
         return email_addresses
     else:

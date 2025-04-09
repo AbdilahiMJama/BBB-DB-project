@@ -11,6 +11,7 @@ import pandas as pd
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 import sqlalchemy as sa
+from sqlalchemy import select, func
 
 
 ###################################
@@ -181,7 +182,7 @@ def getBusinessDataBatch2(engine, metadata, scriptId, batchSize=BATCH_SIZE):
         tmpTable.create(con)
         ins = sa.insert(tmpTable).from_select([businessTable.c.firm_id], qry)
         con.execute(ins)
-        
+
         # Iterate through data tables
         dataTables = [businessTable, addressTable, nameTable, emailTable, phoneTable, urlTable]
         dataFrames = {}
