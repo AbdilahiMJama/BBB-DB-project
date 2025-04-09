@@ -174,6 +174,8 @@ def getBusinessDataBatch(engine,metadata,scriptId,batchSize=BATCH_SIZE):
                         businessTable.c.createdon < aMonthAgo).order_by(
                             businessTable.c.createdon.desc()).limit(
                             batchSize)
+    print('TestQuery:',str(qry))
+    
     with engine.connect() as con:
         
         # Insert previous query into a temp table

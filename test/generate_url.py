@@ -115,10 +115,10 @@ if __name__=='__main__':
     # Get the script ID and script activity ID
     sId = getScriptId(con, mnsuMeta)
     saId = initiateScriptActivity(con, mnsuMeta,sId) 
-    #print(sId)
+    print(sId)
     # Get the business data
     
-    dfs = getBusinessDataBatch(con,mnsuMeta,None,50) 
+    dfs = getBusinessDataBatch(con,mnsuMeta,sId,50) 
 
     # Get the email, name and url tables as a dataframe from the batch
     # Put a business dataframe (BUSINESS_TABLE), return this table to logProcessedToDB
