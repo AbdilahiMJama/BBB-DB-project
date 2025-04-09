@@ -130,9 +130,7 @@ if __name__=='__main__':
     # Merge the three dataframes on their firm id
     business_email_df = pd.merge(name_df, email_df, on='firm_id', how='inner')
     business_email_df = pd.merge(business_email_df, url_df, on='firm_id', how='left')
-
-    
-
+    # Get output of the merged dataframe
     print(business_email_df[['firm_id','company_name','url_type_id','url_status_id']])
 
     
@@ -152,13 +150,12 @@ if __name__=='__main__':
     #update_df.rename(columns={'BusinessId':'firm_id','Website':'url'}, inplace=True)
     print(update_df[['firm_id','url','status_code','domain','url_status_id']])
 
-    print(update_df.duplicated())
-    #updatedf = update_df.drop_duplicates(subset=['firm_id'], keep='last')
     
+    # Log the generated URLs to the database
     logGeneratedUrlToDB(con, update_df, saId)
 
-
+    # Log the processed rows to the database
     logProcessedToDB(con, business_df, sId, saId)
 
-    # 20k 1k rows at a time
+    # Terminate the script activity
     terminateScriptActivity(con, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
