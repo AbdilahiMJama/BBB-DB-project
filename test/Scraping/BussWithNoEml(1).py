@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import connect_iabbb as ci
-from setupcopy2 import getBusinessDataBatch2
+from setupcopy2 import getBusWoutEml
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import MetaData
@@ -41,7 +41,7 @@ con = ci.connect(db='MNSU', instance='SANDBOX', user='AMANUEL', engine='sqlalche
 
 metadata_obj = MetaData()
 metadata_obj.reflect(bind=con)
-test = getBusinessDataBatch2(con,metadata_obj,None,50)
+test = getBusWoutEml(con,metadata_obj,None,50)
 
 print(test.keys())
 
@@ -68,8 +68,8 @@ url_df = test[URL_TABLE][['firm_id', 'url']]
 # print("\nEmail DataFrame:")
 # print(email_df)
 
-# print("\nPhone DataFrame:")
-# print(phone_df)
+print("\nPhone DataFrame:")
+print(phone_df)
 
 # print("\nURL DataFrame:")
 # print(url_df)
@@ -117,4 +117,4 @@ def emlScrape(urlDf, emlDf):
 
     return emlDf
         
-print(emlScrape(url_df, email_df))
+# print(emlScrape(url_df, email_df))

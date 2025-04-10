@@ -133,7 +133,7 @@ def terminateScriptActivity(engine,metadata,activityId,errorCode=None,errorText=
 
 
 
-def getBusinessDataBatch2(engine, metadata, scriptId, batchSize=BATCH_SIZE):
+def getBusWoutEml(engine, metadata, scriptId, batchSize=BATCH_SIZE):
     """
     Returns a dict of dataframes for the next BATCH_SIZE number of firm_ids to
     be processed. These dataframes will all share the same firm_ids.
@@ -170,6 +170,70 @@ def getBusinessDataBatch2(engine, metadata, scriptId, batchSize=BATCH_SIZE):
     # Adjust the query to select firms that do not have emails but have URLs
     qry = sa.select(businessTable.c.firm_id).filter(
         ~subq1).filter(  # Ensure the firm does not have an email
+        subq2).filter(  # Ensure the firm has a URL
+        businessTable.c.active).filter(
+        businessTable.c.outofbusiness_status.is_(None)).filter(
+        businessTable.c.createdon < aMonthAgo).order_by(
+        businessTable.c.createdon.desc()).limit(batchSize)
+
+    with engine.connect() as con:
+        
+        # Insert previous query into a temp table
+        tmpTable.create(con)
+        ins = sa.insert(tmpTable).from_select([businessTable.c.firm_id], qry)
+        con.execute(ins)
+
+        # Iterate through data tables
+        dataTables = [businessTable, addressTable, nameTable, emailTable, phoneTable, urlTable]
+        dataFrames = {}
+        for dt in dataTables:
+            
+            # Join each table to the temp table
+            dtJoin = sa.join(dt, tmpTable, dt.c.firm_id == tmpTable.c.firm_id)
+            slct = sa.select(dt).select_from(dtJoin)
+            
+            # Then write the result to a dataframe
+            dataFrames[dt.name] = pd.read_sql(slct, con)
+    
+    return dataFrames
+
+def getBusWoutPhone(engine, metadata, scriptId, batchSize=BATCH_SIZE):
+    """
+    Returns a dict of dataframes for the next BATCH_SIZE number of firm_ids to
+    be processed. These dataframes will all share the same firm_ids.
+    
+    This version retrieves firms that do not have emails but have URLs.
+    
+    engine: a sqlalchemy engine object
+    metadata: a sqlalchemy Metadata object
+    scriptId: this script's pkey
+    batchSize: number of firm_ids to pull
+    """
+    
+    # Create sqlalchemy table objects
+    tmpTableName = 'mnsu_firm_pull_{}'.format(date.today().strftime('%Y%m%d'))
+    tmpMeta = sa.schema.MetaData()
+    tmpTable = sa.Table(tmpTableName, tmpMeta,
+                         sa.Column('firm_id', sa.INTEGER, primary_key=True),
+                         prefixes=['TEMPORARY'])    
+    businessTable = sa.Table(BUSINESS_TABLE, metadata, autoload_with=engine)
+    addressTable = sa.Table(ADDRESS_TABLE, metadata, autoload_with=engine)
+    nameTable = sa.Table(NAME_TABLE, metadata, autoload_with=engine)
+    emailTable = sa.Table(EMAIL_TABLE, metadata, autoload_with=engine)
+    phoneTable = sa.Table(PHONE_TABLE, metadata, autoload_with=engine)
+    urlTable = sa.Table(URL_TABLE, metadata, autoload_with=engine)
+    processedTable = sa.Table(PROCESSED_TABLE, metadata, autoload_with=engine)
+            
+    # Timestamp from 1 month ago, used in the pull query
+    aMonthAgo = datetime.now() - relativedelta(month=1)
+    
+    # Query selecting firm_ids
+    subq1 = sa.select(1).where(businessTable.c.firm_id == phoneTable.c.firm_id).exists()  # Firms with phone numbers
+    subq2 = sa.select(1).where(businessTable.c.firm_id == urlTable.c.firm_id).exists()  # Firms with URLs
+    
+    # Adjust the query to select firms that do not have phone numbers but have URLs
+    qry = sa.select(businessTable.c.firm_id).filter(
+        ~subq1).filter(  # Ensure the firm does not have an phone number
         subq2).filter(  # Ensure the firm has a URL
         businessTable.c.active).filter(
         businessTable.c.outofbusiness_status.is_(None)).filter(
