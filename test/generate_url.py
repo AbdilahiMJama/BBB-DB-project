@@ -8,14 +8,13 @@ from dotenv import load_dotenv
 from sqlalchemy import MetaData
 from main_url_scrape import main_scrape_urls
 from urllib.parse import urlparse
-from create_urls import extract_domain_name
 import sqlalchemy as sa
 
 ### For the url type (later use) use a dictionary.
 
-SCRIPT_NAME = 'generating_urls_test_s2025'
+SCRIPT_NAME = 'generating_urls_final_s2025'
 SCRIPT_VERSION = '1.0.2'
-VERSION_NOTE = None         # put version note string here if desired, otherwise None
+VERSION_NOTE = None         # put version note string here, otherwise None
 CONNECT_USER = 'ABDI'
 CONNECT_DB = 'MNSU'
 CONNECT_INSTANCE = 'SANDBOX'
@@ -28,11 +27,11 @@ NAME_TABLE = 'tblfirms_firm_companyname'
 EMAIL_TABLE = 'tblfirms_firm_email'
 URL_TABLE = 'tblfirms_firm_url'
 GENERATED_URL_TABLE = 'mnsu_generated_firm_url'
-BATCH_SIZE = 50
+BATCH_SIZE = 300
 MNSU_URL_ID = 1
 
-errorCode = 42804
-errorText = 'Datatype mismatch'
+errorCode = None
+errorText = None
 
 def getDomainName(url):
     """   
@@ -68,19 +67,9 @@ def logGeneratedUrlToDB(engine,processedRows,saId):
     :
     :return: None
     """
-    #columns = {'BusinessId':'firm_id','Website':'url'}
-    
     assert isinstance(processedRows,pd.core.frame.DataFrame)
-    
-        
-    #processedRows.rename(columns=columns, inplace=True)
     processedRows = processedRows[['firm_id','url','domain', 'main', 'url_type_id', 'url_status_id']]
     
-
-    # issue here, it adds the url and script_activity_id but fails to add the rest of the columns
-    # pull 1000 rows at a time and then put all into one dataframe
-    # process it 
-    # push it to the table, 1000 rows at a time and we keep track of the rows, 1000, 1001
     processedRows[['mnsu_script_activity_id']] = saId
     processedRows[['note']] = 'Testing generated URLs'
     processedRows[['confidence_level']] = 1
@@ -92,18 +81,72 @@ def logGeneratedUrlToDB(engine,processedRows,saId):
                                 schema=CONNECT_SCHEMA,
                                 if_exists='append',
                                 index=False)
-    
-    
-# Query for the firm_id     
-#subq2 = sa.select(1).where(
-#sa.and_(businessTable.c.firm_id==processedTable.c.firm_id,
-#               processedTable.c.mnsu_script_id==scriptId))
 
-# Insert into script id table and mnsu_firm_processed table. Adds duplicate firm_ids. How to handle this.
-# add a function to check if the firm_id exists? Shouldn't the processed table be handling this.
+
+def process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE):
+    """
+    Pull, process, and put the URLs in batches into the database.
+    Args:
+        con: database connection
+        mnsuMeta: metadata object
+        sId: script id
+        saId: script activity id
+        batch_size: number of records to pull and push at once (default 50)
+    """
+    processed_count = 0
+    print("\n=== Starting URL Processing ===")
+    print(f"Script ID: {sId}")
+    print(f"Script Activity ID: {saId}")
+    print(f"Batch Size: {batch_size}")
+    print("==============================\n")
+
+    while True:
+        print(f"\n--- Starting Batch {(processed_count // batch_size) + 1} ---")
+        print("Pulling data from database...")
+        dfs = getBusinessDataBatch(con, mnsuMeta, sId, batch_size)
+        
+        if not dfs or dfs[BUSINESS_TABLE].empty:
+            print("\n=== Process Complete ===")
+            print(f"Total records processed: {processed_count}")
+            print("========================")
+            break
+
+        # Get the required dataframes
+        business_df = dfs[BUSINESS_TABLE][['firm_id']]
+        email_df = dfs[EMAIL_TABLE][['firm_id', 'email']]
+        name_df = dfs[NAME_TABLE][['firm_id', 'company_name']]
+        url_df = dfs[URL_TABLE][['firm_id', 'url', 'main', 'url_type_id', 'url_status_id']]
+
+        print(f"Records in current batch: {len(business_df)}")
+
+        # Merge dataframes
+        business_email_df = pd.merge(name_df, email_df, on='firm_id', how='inner')
+        business_email_df = pd.merge(business_email_df, url_df, on='firm_id', how='left')
+
+        # Process URLs for this batch remove from the fuction itself print
+        update_df = main_scrape_urls(business_email_df)
+        
+        # Extract domain and update status
+        update_df['domain'] = update_df['url'].apply(getDomainName)
+        update_df['url_status_id'] = update_df['status_code'].apply(lambda x: 1 if x == 200 else 3)
+
+        # Push this batch immediately
+        print("Pushing generated URLs to database...")
+        logGeneratedUrlToDB(con, update_df, saId)
+
+        # Log processed businesses
+        print("Logging processed businesses...")
+        logProcessedToDB(con, business_df, sId, saId)
+        
+        processed_count += len(business_df)
+        print(f"\n✓ Batch {(processed_count // batch_size)} completed")
+        print(f"✓ Records in this batch: {len(business_df)}")
+        print(f"✓ Total records processed: {processed_count}")
+        
 
 if __name__=='__main__':
     
+    print("\n=== URL Generation Script Starting ===")
     # Load Environment Variables
     load_dotenv()
     # Create connection
@@ -116,8 +159,23 @@ if __name__=='__main__':
     sId = getScriptId(con, mnsuMeta)
     saId = initiateScriptActivity(con, mnsuMeta,sId) 
     print(sId)
-    # Get the business data
-    
+    # Get the business data 
+    try:
+        process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=50)
+        
+        print("\nScript completed successfully!")
+        print("Terminating script activity...")
+        terminateScriptActivity(con, mnsuMeta, saId)
+    except Exception as e:
+        print("\n!!! Error occurred !!!")
+        print(f"Error message: {str(e)}")
+        print("Terminating script activity with error...")
+        terminateScriptActivity(con, mnsuMeta, saId, errorCode=errorCode, errorText=str(e))
+        raise
+    finally:
+        print("\n=== Script Execution Finished ===")
+
+    '''
     dfs = getBusinessDataBatch(con,mnsuMeta,sId,50) 
 
     # Get the email, name and url tables as a dataframe from the batch
@@ -159,3 +217,4 @@ if __name__=='__main__':
 
     # Terminate the script activity
     terminateScriptActivity(con, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
+    '''
