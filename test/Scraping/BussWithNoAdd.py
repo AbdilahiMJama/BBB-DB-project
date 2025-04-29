@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import connect_iabbb as ci
-from setup import getBusWoutPhone
+from setup import getBusWoutEml
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import MetaData
@@ -41,7 +41,7 @@ con = ci.connect(db='MNSU', instance='SANDBOX', user='AMANUEL', engine='sqlalche
 
 metadata_obj = MetaData()
 metadata_obj.reflect(bind=con)
-test = getBusWoutPhone(con,metadata_obj,None,50)
+test = getBusWoutEml(con,metadata_obj,None,50)
 
 print(test.keys())
 
@@ -68,15 +68,16 @@ url_df = test[URL_TABLE][['firm_id', 'url']]
 # print("\nEmail DataFrame:")
 # print(email_df)
 
-print("\nPhone DataFrame:")
-print(phone_df)
+# print("\nPhone DataFrame:")
+# print(phone_df)
 
-print("\nURL DataFrame:")
-print(url_df)
+# print("\nURL DataFrame:")
+# print(url_df)
 
 
 
-def phoneScrape(urlDf, phoneDf):
+
+def addScrape(urlDf, emlDf):
     """
     Scrapes email from a given URL using the extract_email_data function.
     
@@ -93,27 +94,27 @@ def phoneScrape(urlDf, phoneDf):
         firm_id = row['firm_id']
         
         # Scrape email data
-        scrapedPhone = extract_phone_data(firm_id, url)
-        print(scrapedPhone, url)
+        scrapedEmail = extract_adress_data(firm_id, url)
+        print(scrapedEmail, url)
         
         # Append the scraped emails to the email DataFrame
         # for now, we're only considering 2 emails per firm ID
         i = 0
-        while i < 2 and scrapedPhone != None and  i < len(scrapedPhone):
+        while i < 2 and scrapedEmail != None and  i < len(scrapedEmail):
             # Check if the email is already in the DataFrame
-            if scrapedPhone[i] not in phoneDf['email'].values:
+            if scrapedEmail[i] not in emlDf['email'].values:
                 print(True)
                 # Create a new row as a DataFrame
-                new_row = pd.DataFrame({'firm_id': [firm_id], 'email': [scrapedPhone[i]]})
+                new_row = pd.DataFrame({'firm_id': [firm_id], 'email': [scrapedEmail[i]]})
                 
                 # Use pd.concat() to append the new row
-                phoneDf = pd.concat([phoneDf, new_row], ignore_index=True)
+                emlDf = pd.concat([emlDf, new_row], ignore_index=True)
 
                 i += 1
             else: 
                 i += 1
                 continue
 
-    return phoneDf
-
-print(phoneScrape(url_df, phone_df))
+    return emlDf
+        
+# print(emlScrape(url_df, email_df))
