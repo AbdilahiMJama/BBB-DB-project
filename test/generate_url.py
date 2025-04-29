@@ -1,3 +1,15 @@
+'''
+
+This is the generate_url file that generates urls from either the business name or the email given.
+It does the following:
+ 1. Pulls data from the business, email and url table on the firm id where the urls are missing.
+ 2. Logs the processed firm_ids (Business Ids) in a processed table (mnsu_firm_processed) to keep track of the processed firms.
+ 3. Generates the URLs from business names with helper functions.
+ 4. Logs the generated URLs into a table (mnsu_generated_url).
+ 5. Logs the script id and script activity id to its various tables to keep track of all the script activities.
+ 
+'''
+
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -10,7 +22,6 @@ from main_url_scrape import main_scrape_urls
 from urllib.parse import urlparse
 import sqlalchemy as sa
 
-### For the url type (later use) use a dictionary.
 
 SCRIPT_NAME = 'generating_urls_final_s2025'
 SCRIPT_VERSION = '1.0.3'
@@ -33,13 +44,12 @@ MNSU_URL_ID = 1
 errorCode = None
 errorText = None
 
+
 def getDomainName(url):
     """   
     Extracts the domain name from a URL in the dataframe.
-    Args:
-        url: The URL string.
-    Returns:
-        The domain name, or None if the URL is invalid.
+    :param url: The URL string.
+    :return:The domain name, or None if the URL is invalid.
     """
     try:
         parsed_url = urlparse(url)
@@ -50,19 +60,11 @@ def getDomainName(url):
     except:
         return None
 
-## Create a function to store the values in the generated_url table
-
-
-def setUrlType(df):
-    pass
-
-
 def logGeneratedUrlToDB(engine,processedRows,saId):
     """
     Log the generated urls to the database
     :param engine: sqlalchemy engine
     :param processedRows: dataframe of processed rows
-    :param scriptId: script id not necessary
     :param activityId: script activity id
     :
     :return: None
@@ -86,12 +88,12 @@ def logGeneratedUrlToDB(engine,processedRows,saId):
 def process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE):
     """
     Pull, process, and put the URLs in batches into the database.
-    Args:
-        con: database connection
-        mnsuMeta: metadata object
-        sId: script id
-        saId: script activity id
-        batch_size: number of records to pull and push at once (default 50)
+    :param: con database connection
+    :param: mnsuMeta: metadata object
+    :param: sId: script id
+    :param: saId: script activity id
+    :param: batch_size: number of records to pull and push at once (default 50)
+    :return : None
     """
     processed_count = 0
     print("\n=== Starting URL Processing ===")
@@ -147,6 +149,7 @@ def process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE):
         print(f"✓ Total records processed: {processed_count}")
         
 
+# Running the code
 if __name__=='__main__':
     
     print("\n=== URL Generation Script Starting ===")
