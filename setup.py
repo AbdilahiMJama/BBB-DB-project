@@ -20,7 +20,7 @@ import sqlalchemy as sa
 SCRIPT_NAME = 'data_quality_s2025'
 SCRIPT_VERSION = '1.0.1'
 VERSION_NOTE = None         # put version note string here if desired, otherwise None
-CONNECT_USER = 'ABDI'
+CONNECT_USER = 'MIKE'
 CONNECT_DB = 'MNSU'
 CONNECT_INSTANCE = 'SANDBOX'
 CONNECT_SCHEMA = 'spring2025'
