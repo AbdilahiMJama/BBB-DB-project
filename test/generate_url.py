@@ -13,7 +13,7 @@ import sqlalchemy as sa
 ### For the url type (later use) use a dictionary.
 
 SCRIPT_NAME = 'generating_urls_final_s2025'
-SCRIPT_VERSION = '1.0.2'
+SCRIPT_VERSION = '1.0.3'
 VERSION_NOTE = None         # put version note string here, otherwise None
 CONNECT_USER = 'ABDI'
 CONNECT_DB = 'MNSU'
@@ -123,6 +123,9 @@ def process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE):
         business_email_df = pd.merge(name_df, email_df, on='firm_id', how='inner')
         business_email_df = pd.merge(business_email_df, url_df, on='firm_id', how='left')
 
+        # Remove duplicates
+        business_email_df = business_email_df.drop_duplicates(subset='firm_id')
+
         # Process URLs for this batch remove from the fuction itself print
         update_df = main_scrape_urls(business_email_df)
         
@@ -161,7 +164,7 @@ if __name__=='__main__':
     print(sId)
     # Get the business data 
     try:
-        process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=50)
+        process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE)
         
         print("\nScript completed successfully!")
         print("Terminating script activity...")

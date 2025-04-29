@@ -19,7 +19,7 @@ import sqlalchemy as sa
 
 SCRIPT_NAME = 'data_quality_s2025'
 # increment this when running a new script version.
-SCRIPT_VERSION = '1.0.2'
+SCRIPT_VERSION = '1.0.3'
 VERSION_NOTE = None         # put version note string here if desired, otherwise None
 CONNECT_USER = 'ABDI'
 CONNECT_DB = 'MNSU'
@@ -174,7 +174,6 @@ def getBusinessDataBatch(engine,metadata,scriptId,batchSize=BATCH_SIZE):
                         businessTable.c.createdon < aMonthAgo).order_by(
                             businessTable.c.createdon.desc()).limit(
                             batchSize)
-    print('TestQuery:',str(qry))
     
     with engine.connect() as con:
         

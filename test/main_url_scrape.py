@@ -24,9 +24,9 @@ def main_scrape_urls(df):
             df.loc[index, 'url'] = website
             # Otherwise, try to get a URL from the business name column using web search
         else:
-            #print("Checking business name")
             df.loc[index, 'url'] = url_from_business_name(row)
-    df = get_statuscode_forPandas(df)  # Check the status codes of the URLs
+    df = get_statuscode_forPandas(df) 
+    # Check the status codes of the URLs
     # If the status code is 200, update the 'Website' column of the input dataframe with the valid URL
     # Remove this line.(figure out how to keep the processed rows.)
     df = df.loc[df['status_code'] == 200]

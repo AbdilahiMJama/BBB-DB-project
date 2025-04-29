@@ -32,7 +32,6 @@ BATCH_SIZE = 10
 
 load_dotenv()
 
-DB = os.environ.get("DB")
 # Create connection
 con = ci.connect(db='MNSU', instance='SANDBOX', user='ABDI', engine='sqlalchemy')
 
@@ -58,9 +57,12 @@ business_email_df = pd.merge(business_email_df, url_df, on='firm_id', how='left'
 business_email_df.rename(columns={'firm_id':'BusinessId','company_name':'BusinessName','email':'Email','url':'Website'}, inplace=True)
 #business_email_df = business_email_df['Website']
 
-print(business_email_df)
-update_df = main_scrape_urls(business_email_df)
-print(update_df)
+#print(business_email_df)
+print(business_email_df[business_email_df.duplicated(['BusinessId'])])
+business_email_df = business_email_df.drop_duplicates(subset='BusinessId')
+print(business_email_df[['BusinessName','BusinessId']])
+#update_df = main_scrape_urls(business_email_df)
+#print(update_df)
 
 
 

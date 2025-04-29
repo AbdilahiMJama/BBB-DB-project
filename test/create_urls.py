@@ -85,10 +85,8 @@ def get_url_from_search(company_name, rating_sites, business_id, company_city_st
     try:
         for j in search(term, num_results=5):
             if filter(j, rating_sites):
-                #print(company_name, business_id, j)
                 if j:
                     website = j
-                    print(website)
                 return website
             else:
                 continue
@@ -97,7 +95,6 @@ def get_url_from_search(company_name, rating_sites, business_id, company_city_st
         time.sleep(5)
     finally:
         print("Search completed")
-        print(website)
         return website, business_id
 
 
