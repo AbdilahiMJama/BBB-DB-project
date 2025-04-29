@@ -318,7 +318,7 @@ def getBusWoutPhone(engine, metadata, scriptId, batchSize=BATCH_SIZE):
     Returns a dict of dataframes for the next BATCH_SIZE number of firm_ids to
     be processed. These dataframes will all share the same firm_ids.
     
-    This version retrieves firms that do not have emails but have URLs.
+    This version retrieves firms that do not have phone but have URLs.
     
     engine: a sqlalchemy engine object
     metadata: a sqlalchemy Metadata object
@@ -376,6 +376,7 @@ def getBusWoutPhone(engine, metadata, scriptId, batchSize=BATCH_SIZE):
             dataFrames[dt.name] = pd.read_sql(slct, con)
     
     return dataFrames
+
 
 def getBusWoutAddress(engine, metadata, scriptId, batchSize=BATCH_SIZE):
     """
