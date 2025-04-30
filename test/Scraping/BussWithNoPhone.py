@@ -41,7 +41,7 @@ con = ci.connect(db='MNSU', instance='SANDBOX', user='AMANUEL', engine='sqlalche
 
 metadata_obj = MetaData()
 metadata_obj.reflect(bind=con)
-test = getBusWoutPhone(con,metadata_obj,None,50)
+test = getBusWoutPhone(con,metadata_obj,None,100)
 
 print(test.keys())
 
@@ -101,10 +101,10 @@ def phoneScrape(urlDf, phoneDf):
         i = 0
         while i < 2 and scrapedPhone != None and  i < len(scrapedPhone):
             # Check if the email is already in the DataFrame
-            if scrapedPhone[i] not in phoneDf['email'].values:
+            if scrapedPhone[i] not in phoneDf['phone'].values:
                 print(True)
                 # Create a new row as a DataFrame
-                new_row = pd.DataFrame({'firm_id': [firm_id], 'email': [scrapedPhone[i]]})
+                new_row = pd.DataFrame({'firm_id': [firm_id], 'phone': [scrapedPhone[i]]})
                 
                 # Use pd.concat() to append the new row
                 phoneDf = pd.concat([phoneDf, new_row], ignore_index=True)

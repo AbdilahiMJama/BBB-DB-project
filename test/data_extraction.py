@@ -273,9 +273,14 @@ def extract_phone_data(business_id, url):
     :return: dictionary of all phone numbers found in the given url's webpage
     """
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         soup = bs4.BeautifulSoup(response.content, "html.parser")
-    except Exception:
+
+    except requests.exceptions.Timeout:
+        print(f"[Timeout] Skipping {url}")
+        return None
+    except Exception as e:
+        print(f"[Error] Skipping {url}: {e}")
         return None
 
     # Extract phone numbers from soup using regex for phone numbers
@@ -304,7 +309,7 @@ def extract_email_data(business_id, url):
     :return: list of all valid emails found in the given url's webpage
     """
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         soup = BeautifulSoup(response.content, "html.parser")
 
     except requests.exceptions.Timeout:
