@@ -306,8 +306,14 @@ def extract_email_data(business_id, url):
     try:
         response = requests.get(url)
         soup = BeautifulSoup(response.content, "html.parser")
-    except Exception:
+
+    except requests.exceptions.Timeout:
+        print(f"[Timeout] Skipping {url}")
         return None
+    except Exception as e:
+        print(f"[Error] Skipping {url}: {e}")
+        return None
+        
 
     # Extract email addresses
     email_addresses = []

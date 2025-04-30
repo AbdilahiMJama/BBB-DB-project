@@ -41,7 +41,7 @@ con = ci.connect(db='MNSU', instance='SANDBOX', user='AMANUEL', engine='sqlalche
 
 metadata_obj = MetaData()
 metadata_obj.reflect(bind=con)
-test = getBusWoutEml(con,metadata_obj,None,20)
+test = getBusWoutEml(con,metadata_obj,None,100)
 
 print(test.keys())
 
