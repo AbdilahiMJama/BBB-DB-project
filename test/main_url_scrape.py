@@ -86,11 +86,3 @@ def url_from_business_name(row):
             return website
     return None
 
-
-
-if __name__ == '__main__':
-
-    '''df = pd.read_csv('mn_bbb_businesses.csv')
-    df, original_df = main_scrape_urls(df)  # unpack the tuple
-    df.to_csv('mn_bbb_businesses_with_urls.csv', index=False)
-    original_df.to_csv('mn_bbb_businesses_original.csv', index=False)'''
