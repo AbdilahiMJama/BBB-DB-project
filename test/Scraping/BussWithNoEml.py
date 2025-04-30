@@ -119,7 +119,7 @@ def processEmailsInBatches(con,mnsuMeta,sId,saId,batch_size=BATCH_SIZE):
     print(f"Batch Size: {batch_size}")
     print("==============================\n")
 
-    while processed_count < 2:
+    while True:
         print(f"\n--- Starting Batch {(processed_count // batch_size) + 1} ---")
         print("Pulling data from database...")
         dfs = getBusWoutEml(con, mnsuMeta, sId, batch_size)
@@ -132,7 +132,6 @@ def processEmailsInBatches(con,mnsuMeta,sId,saId,batch_size=BATCH_SIZE):
 
         # Get the required dataframes
         business_df = dfs[BUSINESS_TABLE][['firm_id']]
-        #name_df = dfs[NAME_TABLE][['firm_id', 'company_name']]
         email_df = dfs[EMAIL_TABLE][['firm_id', 'email','email_type_id','email_status_id','address_id']]
         url_df = dfs[URL_TABLE][['firm_id', 'url']]
         print(f"Records in current batch: {len(business_df)}")
@@ -175,7 +174,7 @@ if __name__ == '__main__':
         processEmailsInBatches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE)
         print("\nScript completed successfully!")
         print("Terminating script activity...")
-        terminateScriptActivity(con, mnsuMeta, saId)
+        #terminateScriptActivity(con, mnsuMeta, saId)
     except Exception as e:
         print("\n!!! Error occurred !!!")
         print(f"Error message: {str(e)}")

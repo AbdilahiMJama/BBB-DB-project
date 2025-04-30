@@ -216,38 +216,6 @@ def logProcessedToDB(engine,processedRows,scriptId,activityId):
                          if_exists='append',
                          index=False)
     
-    
-'''   
-if __name__=='__main__':
-    
-    
-    # Instantiate sqlalchemy engine
-    eng = ci.connect(db=CONNECT_DB,instance=CONNECT_INSTANCE,user=CONNECT_USER,engine='sqlalchemy')    
-    # Build DB metadata object
-    mnsuMeta = sa.schema.MetaData(schema=CONNECT_SCHEMA)
-    # collect script ID / script Activity ID
-    sId = getScriptId(eng, mnsuMeta)
-    saId = initiateScriptActivity(eng, mnsuMeta)    
-    # dataframes placed in a dictionary
-    dfs = getBusinessDataBatch(eng, mnsuMeta, sId)
-    
-    
-    
-    
-    
-    #
-    #  everything else goes here:
-    #
-    
-    
-    # Uncomment the next line to test writing the processed firm_ids to DB
-    # Currently this just logs all the firm_ids you pulled    
-#    logProcessedToDB(eng, dfs['tblfirms_firm'], sId, saId)    
-
-    terminateScriptActivity(eng, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
-    
-'''
-
 
 def getBusWoutEml(engine, metadata, scriptId, batchSize=BATCH_SIZE):
     """
@@ -280,17 +248,20 @@ def getBusWoutEml(engine, metadata, scriptId, batchSize=BATCH_SIZE):
     aMonthAgo = datetime.now() - relativedelta(month=1)
     
     # Query selecting firm_ids
-    subq1 = sa.select(1).where(businessTable.c.firm_id == emailTable.c.firm_id).exists()  # Firms with emails
-    subq2 = sa.select(1).where(businessTable.c.firm_id == urlTable.c.firm_id).exists()  # Firms with URLs
-    
+    subq1 = sa.select(1).where(businessTable.c.firm_id == emailTable.c.firm_id)  # Firms with emails
+    subq2 = sa.select(1).where(sa.and_(businessTable.c.firm_id == processedTable.c.firm_id,
+                                       processedTable.c.mnsu_script_id==scriptId
+                                       ))  # Firms with URLs
+    subq3 = sa.select(1).where(businessTable.c.firm_id == urlTable.c.firm_id)
     # Adjust the query to select firms that do not have emails but have URLs
     qry = sa.select(businessTable.c.firm_id).filter(
-        ~subq1).filter(  # Ensure the firm does not have an email
-        subq2).filter(  # Ensure the firm has a URL
-        businessTable.c.active).filter(
-        businessTable.c.outofbusiness_status.is_(None)).filter(
-        businessTable.c.createdon < aMonthAgo).order_by(
-        businessTable.c.createdon.desc()).limit(batchSize)
+        ~subq1.exists()).filter(  # Ensure the firm does not have an email
+            ~subq2.exists()).filter( # Ensure the firm has a URL
+                subq3.exists()).filter(    
+                businessTable.c.active).filter(
+                    businessTable.c.outofbusiness_status.is_(None)).filter(
+                        businessTable.c.createdon < aMonthAgo).order_by(
+                            businessTable.c.createdon.desc()).limit(batchSize)
 
     with engine.connect() as con:
         
@@ -441,4 +412,34 @@ def getBusWoutAddress(engine, metadata, scriptId, batchSize=BATCH_SIZE):
             dataFrames[dt.name] = pd.read_sql(slct, con)
     
     return dataFrames
+
+'''   
+if __name__=='__main__':
     
+    
+    # Instantiate sqlalchemy engine
+    eng = ci.connect(db=CONNECT_DB,instance=CONNECT_INSTANCE,user=CONNECT_USER,engine='sqlalchemy')    
+    # Build DB metadata object
+    mnsuMeta = sa.schema.MetaData(schema=CONNECT_SCHEMA)
+    # collect script ID / script Activity ID
+    sId = getScriptId(eng, mnsuMeta)
+    saId = initiateScriptActivity(eng, mnsuMeta)    
+    # dataframes placed in a dictionary
+    dfs = getBusinessDataBatch(eng, mnsuMeta, sId)
+    
+    
+    
+    
+    
+    #
+    #  everything else goes here:
+    #
+    
+    
+    # Uncomment the next line to test writing the processed firm_ids to DB
+    # Currently this just logs all the firm_ids you pulled    
+#    logProcessedToDB(eng, dfs['tblfirms_firm'], sId, saId)    
+
+    terminateScriptActivity(eng, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
+    
+'''
