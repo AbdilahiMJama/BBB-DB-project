@@ -2,24 +2,26 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import connect_iabbb as ci
-from setup import getBusWoutEml
+from setup import getBusWoutEml, getScriptId, getExistingScriptId, initiateScriptActivity, terminateScriptActivity, logProcessedToDB
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import MetaData
 from main_url_scrape import main_scrape_urls
 from data_extraction import extract_email_data, extract_phone_data, contains_phone_number
+from urllib.parse import urlparse
+import sqlalchemy as sa
 
 
-
-
-
-SCRIPT_NAME = 'generating_urls_for_ten_firms_test_s2025'
+# Configuration
+SCRIPT_NAME = 'generating_emails_for_ten_firms_test_s2025'
 SCRIPT_VERSION = '1.0'
 VERSION_NOTE = None         # put version note string here if desired, otherwise None
-CONNECT_USER = 'AMANUEL'
+CONNECT_USER = 'ABDI'
 CONNECT_DB = 'MNSU'
 CONNECT_INSTANCE = 'SANDBOX'
 CONNECT_SCHEMA = 'spring2025'
+
+# Tables
 SCRIPT_TABLE = 'mnsu_script'
 SCRIPT_ACTIVITY_TABLE = 'mnsu_script_activity'
 PROCESSED_TABLE = 'mnsu_firm_processed'
@@ -29,53 +31,11 @@ NAME_TABLE = 'tblfirms_firm_companyname'
 EMAIL_TABLE = 'tblfirms_firm_email'
 PHONE_TABLE = 'tblfirms_firm_phone'
 URL_TABLE = 'tblfirms_firm_url'
-BATCH_SIZE = 10
+GENERATED_EMAIL_TABLE = 'mnsu_generated_firm_email'
+BATCH_SIZE = 100
 
-
-load_dotenv()
-
-DB = os.environ.get("DB")
-# Create connection
-con = ci.connect(db='MNSU', instance='SANDBOX', user='AMANUEL', engine='sqlalchemy')
-
-
-metadata_obj = MetaData()
-metadata_obj.reflect(bind=con)
-test = getBusWoutEml(con,metadata_obj,None,100)
-
-print(test.keys())
-
-# Assuming 'test' is a dictionary containing DataFrames for each table
-
-# Extract relevant DataFrames
-business_df = test[BUSINESS_TABLE][['firm_id']]
-address_df = test[ADDRESS_TABLE][['firm_id', 'zip']]
-name_df = test[NAME_TABLE][['firm_id', 'company_name']]
-email_df = test[EMAIL_TABLE][['firm_id', 'email']]
-phone_df = test[PHONE_TABLE][['firm_id', 'phone']]
-url_df = test[URL_TABLE][['firm_id', 'url']]
-
-# # Print the extracted columns for each DataFrame
-# print("Business DataFrame:")
-# print(business_df)
-
-# print("\nAddress DataFrame:")
-# print(address_df)
-
-# print("\nName DataFrame:")
-# print(name_df)
-
-# print("\nEmail DataFrame:")
-# print(email_df)
-
-# print("\nPhone DataFrame:")
-# print(phone_df)
-
-print("\nURL DataFrame:")
-print(url_df)
-
-
-
+errorCode = None 
+errorText = None
 
 def emlScrape(urlDf, emlDf):
     """
@@ -88,8 +48,6 @@ def emlScrape(urlDf, emlDf):
     """
 
     for index, row in urlDf.iterrows():
-        # print(row[1])
-        # print(type(row[1]))
         url = row['url']
         firm_id = row['firm_id']
         
@@ -116,5 +74,113 @@ def emlScrape(urlDf, emlDf):
                 continue
 
     return emlDf
+       
+
+def getDomainName(email):
+    """   
+    Extracts the domain name from an email address.
+    :param url: The email string.
+    :return:The domain name, or None if the URL is invalid.
+    """
+    try:
+        return email.split('@')[1]
+    except:
+        return None
+
+def logGeneratedEmailToDB(engine, processedRows, saId):
+    """
+    Log the generated urls to the database
+    :param engine: sqlalchemy engine
+    :param processedRows: dataframe of processed rows
+    :param activityId: script activity id
+    :
+    :return: None
+    """
+    assert isinstance(processedRows,pd.core.frame.DataFrame)
+    processedRows = processedRows[['firm_id','email','email_type_id','domain','email_status_id','address_id']]
+    
+    processedRows[['mnsu_script_activity_id']] = saId
+    processedRows[['note']] = 'Testing generated emails'
+    processedRows[['confidence_level']] = 1
+    
+    processedRows.to_sql(name=GENERATED_EMAIL_TABLE,
+                                con=engine,
+                                schema=CONNECT_SCHEMA,
+                                if_exists='append',
+                                index=False)
+
+def processEmailsInBatches(con,mnsuMeta,sId,saId,batch_size=BATCH_SIZE):
+    """
+    """
+    processed_count = 0
+    print("\n=== Starting Email Processing ===")
+    print(f"Script ID: {sId}")
+    print(f"Script Activity ID: {saId}")
+    print(f"Batch Size: {batch_size}")
+    print("==============================\n")
+
+    while processed_count < 2:
+        print(f"\n--- Starting Batch {(processed_count // batch_size) + 1} ---")
+        print("Pulling data from database...")
+        dfs = getBusWoutEml(con, mnsuMeta, sId, batch_size)
         
-print(emlScrape(url_df, email_df))
+        if not dfs or dfs[BUSINESS_TABLE].empty:
+            print("\n=== Process Complete ===")
+            print(f"Total records processed: {processed_count}")
+            print("========================")
+            break
+
+        # Get the required dataframes
+        business_df = dfs[BUSINESS_TABLE][['firm_id']]
+        #name_df = dfs[NAME_TABLE][['firm_id', 'company_name']]
+        email_df = dfs[EMAIL_TABLE][['firm_id', 'email','email_type_id','email_status_id','address_id']]
+        url_df = dfs[URL_TABLE][['firm_id', 'url']]
+        print(f"Records in current batch: {len(business_df)}")
+
+        # Merge dataframes
+        updated_email_df = emlScrape(url_df,email_df)
+        
+        # Extract domain and update status
+        updated_email_df['domain'] = updated_email_df['email'].apply(getDomainName)
+
+        # Push this batch immediately
+        print("Pushing generated Emails to database...")
+        logGeneratedEmailToDB(con, updated_email_df, saId)
+
+        # Log processed businesses
+        print("Logging processed businesses...")
+        logProcessedToDB(con, business_df, sId, saId)
+        print(updated_email_df)
+        processed_count += len(business_df)
+        print(f"\n✓ Batch {(processed_count // batch_size)} completed")
+        print(f"✓ Records in this batch: {len(business_df)}")
+        print(f"✓ Total records processed: {processed_count}")
+
+if __name__ == '__main__':
+    print("\n=== Email Generation Script Starting ===")
+    # Load Environment Variables
+    load_dotenv()
+    # Create connection
+    con = ci.connect(db='MNSU', instance='SANDBOX', user='ABDI', engine='sqlalchemy')
+
+   # Create a metadata object
+    mnsuMeta = sa.schema.MetaData(schema=CONNECT_SCHEMA)
+      
+    # Get the script ID and script activity ID
+    sId = getScriptId(con, mnsuMeta)
+    saId = initiateScriptActivity(con, mnsuMeta,sId) 
+    #print(sId)
+    # Get the business data 
+    try:
+        processEmailsInBatches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE)
+        print("\nScript completed successfully!")
+        print("Terminating script activity...")
+        terminateScriptActivity(con, mnsuMeta, saId)
+    except Exception as e:
+        print("\n!!! Error occurred !!!")
+        print(f"Error message: {str(e)}")
+        print("Terminating script activity with error...")
+        terminateScriptActivity(con, mnsuMeta, saId, errorCode=errorCode, errorText=str(e))
+        raise
+    finally:
+        print("\n=== Script Execution Finished ===")
