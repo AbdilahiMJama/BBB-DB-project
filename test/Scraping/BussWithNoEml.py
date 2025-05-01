@@ -1,3 +1,7 @@
+'''
+Add comments here
+'''
+
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -32,7 +36,7 @@ EMAIL_TABLE = 'tblfirms_firm_email'
 PHONE_TABLE = 'tblfirms_firm_phone'
 URL_TABLE = 'tblfirms_firm_url'
 GENERATED_EMAIL_TABLE = 'mnsu_generated_firm_email'
-BATCH_SIZE = 100
+BATCH_SIZE = 300
 
 errorCode = None 
 errorText = None
