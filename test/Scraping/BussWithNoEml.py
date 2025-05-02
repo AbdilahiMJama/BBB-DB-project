@@ -1,5 +1,11 @@
 '''
-Add comments here
+Written by Spring 2025 MNSU project team
+This script generates emails for businesses that don't have an email address.
+It does the following:
+ 1. Pulls data from the business, email and url table on the firm id where the email are missing.
+ 2. Logs the processed firm_ids (Business Ids) in a processed table (mnsu_firm_processed) to keep track of the processed firms.
+ 3. Scrape emails from the urls with helper functions.
+ 4. Logs the generated emails into a table (mnsu_generated_firm_email).  
 '''
 
 import os
@@ -16,16 +22,16 @@ from urllib.parse import urlparse
 import sqlalchemy as sa
 
 
-# Configuration
-SCRIPT_NAME = 'generating_emails_for_ten_firms_test_s2025'
-SCRIPT_VERSION = '1.0'
-VERSION_NOTE = None         # put version note string here if desired, otherwise None
+#Configuration
+SCRIPT_NAME = 'generating_emails_firms_with_no_emails_s2025'
+SCRIPT_VERSION = '1.0.4'
+VERSION_NOTE = None         #put version note string here if desired, otherwise None
 CONNECT_USER = 'ABDI'
 CONNECT_DB = 'MNSU'
 CONNECT_INSTANCE = 'SANDBOX'
 CONNECT_SCHEMA = 'spring2025'
 
-# Tables
+#Tables
 SCRIPT_TABLE = 'mnsu_script'
 SCRIPT_ACTIVITY_TABLE = 'mnsu_script_activity'
 PROCESSED_TABLE = 'mnsu_firm_processed'
@@ -55,21 +61,21 @@ def emlScrape(urlDf, emlDf):
         url = row['url']
         firm_id = row['firm_id']
         
-        # Scrape email data
+        #Scrape email data
         scrapedEmail = extract_email_data(firm_id, url)
         print(scrapedEmail, url)
         
-        # Append the scraped emails to the email DataFrame
-        # for now, we're only considering 2 emails per firm ID
+        #Append the scraped emails to the email DataFrame
+        #for now, we're only considering 2 emails per firm ID
         i = 0
         while i < 2 and scrapedEmail != None and  i < len(scrapedEmail):
-            # Check if the email is already in the DataFrame
+            #Check if the email is already in the DataFrame
             if scrapedEmail[i] not in emlDf['email'].values:
                 print(True)
-                # Create a new row as a DataFrame
+                #Create a new row as a DataFrame
                 new_row = pd.DataFrame({'firm_id': [firm_id], 'email': [scrapedEmail[i]]})
                 
-                # Use pd.concat() to append the new row
+                #Use pd.concat() to append the new row
                 emlDf = pd.concat([emlDf, new_row], ignore_index=True)
 
                 i += 1
@@ -134,23 +140,23 @@ def processEmailsInBatches(con,mnsuMeta,sId,saId,batch_size=BATCH_SIZE):
             print("========================")
             break
 
-        # Get the required dataframes
+        #Get the required dataframes
         business_df = dfs[BUSINESS_TABLE][['firm_id']]
         email_df = dfs[EMAIL_TABLE][['firm_id', 'email','email_type_id','email_status_id','address_id']]
         url_df = dfs[URL_TABLE][['firm_id', 'url']]
         print(f"Records in current batch: {len(business_df)}")
 
-        # Merge dataframes
+        #Merge dataframes
         updated_email_df = emlScrape(url_df,email_df)
         
-        # Extract domain and update status
+        #Extract domain and update status
         updated_email_df['domain'] = updated_email_df['email'].apply(getDomainName)
 
-        # Push this batch immediately
+        #Push this batch immediately
         print("Pushing generated Emails to database...")
         logGeneratedEmailToDB(con, updated_email_df, saId)
 
-        # Log processed businesses
+        #Log processed businesses
         print("Logging processed businesses...")
         logProcessedToDB(con, business_df, sId, saId)
         print(updated_email_df)
@@ -161,24 +167,23 @@ def processEmailsInBatches(con,mnsuMeta,sId,saId,batch_size=BATCH_SIZE):
 
 if __name__ == '__main__':
     print("\n=== Email Generation Script Starting ===")
-    # Load Environment Variables
+    #Load Environment Variables
     load_dotenv()
-    # Create connection
+    #Create connection
     con = ci.connect(db='MNSU', instance='SANDBOX', user='ABDI', engine='sqlalchemy')
 
-   # Create a metadata object
+    #Create a metadata object
     mnsuMeta = sa.schema.MetaData(schema=CONNECT_SCHEMA)
       
-    # Get the script ID and script activity ID
+    #Get the script ID and script activity ID
     sId = getScriptId(con, mnsuMeta)
     saId = initiateScriptActivity(con, mnsuMeta,sId) 
-    #print(sId)
-    # Get the business data 
+    #Get the business data 
     try:
         processEmailsInBatches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE)
         print("\nScript completed successfully!")
         print("Terminating script activity...")
-        #terminateScriptActivity(con, mnsuMeta, saId)
+        terminateScriptActivity(con, mnsuMeta, saId)
     except Exception as e:
         print("\n!!! Error occurred !!!")
         print(f"Error message: {str(e)}")
