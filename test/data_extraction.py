@@ -1,5 +1,5 @@
 import bs4
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 import requests
 import re
 import whois
@@ -269,23 +269,30 @@ def url_is_review_page(url):
 def extract_phone_data(business_id, url):
     """
     Finds phone numbers in the given url's webpage
-    :param business_id: id associated with a business
     :param url: url to search for phone numbers in
     :return: dictionary of all phone numbers found in the given url's webpage
     """
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         soup = bs4.BeautifulSoup(response.content, "html.parser")
-    except Exception:
+
+    except requests.exceptions.Timeout:
+        print(f"[Timeout] Skipping {url}")
+        return None
+    except Exception as e:
+        print(f"[Error] Skipping {url}: {e}")
         return None
 
     # Extract phone numbers from soup using regex for phone numbers
     phone_numbers = []
     counter = 0
     try:
-        for tag in soup.find_all(text=re.compile(r'(?\d{3})?[-.\s]?\d{3}[-.\s]?\d{4}')):
+
+        for tag in soup.find_all(text=re.compile(r'(?:\+1\s*)?(?:\(?\d{3}\)?[\s.-]?)\d{3}[\s.-]?\d{4}')):
             counter += 1
-            phone_numbers.append(tag.string)
+            cleaned_number = re.sub(r'[^\d]', '', tag.string)  # Remove non-digit characters
+            if len(cleaned_number) == 10 or (len(cleaned_number) == 11 and cleaned_number.startswith('1')):
+                phone_numbers.append(cleaned_number)
     except:
         return None
     if len(phone_numbers) >= 1:
@@ -299,13 +306,27 @@ def extract_email_data(business_id, url):
     Finds email addresses in the given url's webpage
     :param business_id: id associated with a business
     :param url: url to search for emails in
-    :return: dictionary of all emails found in the given url's webpage
+    :return: list of all valid emails found in the given url's webpage
     """
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,/;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+    }
     try:
-        response = requests.get(url)
+        response = requests.get(url,headers=headers ,timeout=10)
         soup = BeautifulSoup(response.content, "html.parser")
-    except Exception:
+
+    except requests.exceptions.Timeout:
+        print(f"[Timeout] Skipping {url}")
         return None
+    except Exception as e:
+        print(f"[Error] Skipping {url}: {e}")
+        return None
+        
 
     # Extract email addresses
     email_addresses = []
@@ -313,10 +334,17 @@ def extract_email_data(business_id, url):
     for tag in soup.find_all('a'):
         email = tag.get('href')
         if email and 'mailto:' in email:
-            if email in email_addresses:
-                continue
-            email_number += 1
-            email_addresses.append(email)
+            email = email[7:]  # Remove the 'mailto:' prefix
+            email = email.split('?')[0]  # Remove query strings if present
+            
+            # Use regex to validate and clean the email address
+            match = re.search(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', email)
+            if match:
+                cleaned_email = match.group(0)  # Extract the valid email address
+                if cleaned_email not in email_addresses:  # Avoid duplicates
+                    email_number += 1
+                    email_addresses.append(cleaned_email)
+
     if len(email_addresses) >= 1:
         return email_addresses
     else:
