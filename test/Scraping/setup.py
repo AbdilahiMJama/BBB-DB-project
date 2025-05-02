@@ -315,13 +315,17 @@ def getBusWoutPhone(engine, metadata, scriptId, batchSize=BATCH_SIZE):
     aMonthAgo = datetime.now() - relativedelta(month=1)
     
     # Query selecting firm_ids
-    subq1 = sa.select(1).where(businessTable.c.firm_id == phoneTable.c.firm_id).exists()  # Firms with phone numbers
-    subq2 = sa.select(1).where(businessTable.c.firm_id == urlTable.c.firm_id).exists()  # Firms with URLs
+    subq1 = sa.select(1).where(businessTable.c.firm_id == phoneTable.c.firm_id)
+    subq2 = sa.select(1).where(sa.and_(businessTable.c.firm_id == processedTable.c.firm_id,
+                                       processedTable.c.mnsu_script_id==scriptId
+                                       ))  # Firms with phone numbers
+    subq3 = sa.select(1).where(businessTable.c.firm_id == urlTable.c.firm_id)  # Firms with URLs
     
     # Adjust the query to select firms that do not have phone numbers but have URLs
     qry = sa.select(businessTable.c.firm_id).filter(
-        ~subq1).filter(  # Ensure the firm does not have an phone number
-        subq2).filter(  # Ensure the firm has a URL
+        ~subq1.exists()).filter(  # Ensure the firm does not have an phone number
+            ~subq2.exists()).filter(
+                subq3.exists()).filter(  # Ensure the firm has a URL
         businessTable.c.active).filter(
         businessTable.c.outofbusiness_status.is_(None)).filter(
         businessTable.c.createdon < aMonthAgo).order_by(
