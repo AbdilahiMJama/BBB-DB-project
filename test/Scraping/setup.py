@@ -219,6 +219,7 @@ def logProcessedToDB(engine,processedRows,scriptId,activityId):
 
 def getBusWoutEml(engine, metadata, scriptId, batchSize=BATCH_SIZE):
     """
+    Written by Spring 2025 MNSU project team
     Returns a dict of dataframes for the next BATCH_SIZE number of firm_ids to
     be processed. These dataframes will all share the same firm_ids.
     
@@ -286,6 +287,7 @@ def getBusWoutEml(engine, metadata, scriptId, batchSize=BATCH_SIZE):
 
 def getBusWoutPhone(engine, metadata, scriptId, batchSize=BATCH_SIZE):
     """
+    Written by Spring 2025 MNSU project team
     Returns a dict of dataframes for the next BATCH_SIZE number of firm_ids to
     be processed. These dataframes will all share the same firm_ids.
     
@@ -355,6 +357,7 @@ def getBusWoutPhone(engine, metadata, scriptId, batchSize=BATCH_SIZE):
 
 def getBusWoutAddress(engine, metadata, scriptId, batchSize=BATCH_SIZE):
     """
+    Written by Spring 2025 MNSU project team
     Returns a dict of dataframes for the next BATCH_SIZE number of firm_ids to
     be processed. These dataframes will all share the same firm_ids.
     
@@ -416,34 +419,3 @@ def getBusWoutAddress(engine, metadata, scriptId, batchSize=BATCH_SIZE):
             dataFrames[dt.name] = pd.read_sql(slct, con)
     
     return dataFrames
-
-'''   
-if __name__=='__main__':
-    
-    
-    # Instantiate sqlalchemy engine
-    eng = ci.connect(db=CONNECT_DB,instance=CONNECT_INSTANCE,user=CONNECT_USER,engine='sqlalchemy')    
-    # Build DB metadata object
-    mnsuMeta = sa.schema.MetaData(schema=CONNECT_SCHEMA)
-    # collect script ID / script Activity ID
-    sId = getScriptId(eng, mnsuMeta)
-    saId = initiateScriptActivity(eng, mnsuMeta)    
-    # dataframes placed in a dictionary
-    dfs = getBusinessDataBatch(eng, mnsuMeta, sId)
-    
-    
-    
-    
-    
-    #
-    #  everything else goes here:
-    #
-    
-    
-    # Uncomment the next line to test writing the processed firm_ids to DB
-    # Currently this just logs all the firm_ids you pulled    
-#    logProcessedToDB(eng, dfs['tblfirms_firm'], sId, saId)    
-
-    terminateScriptActivity(eng, mnsuMeta, saId, errorCode=errorCode, errorText=errorText)
-    
-'''
