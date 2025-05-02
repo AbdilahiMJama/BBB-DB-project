@@ -1,3 +1,12 @@
+'''
+Written by Spring 2025 MNSU project team
+This script generates phone numbers for businesses that don't have a phone number.
+It does the following:
+ 1. Pulls data from the business, email and url table on the firm id where the phone are missing.
+ 2. Logs the processed firm_ids (Business Ids) in a processed table (mnsu_firm_processed) to keep track of the processed firms.
+ 3. Scrape phone numbers from the urls with helper functions.
+ 4. Logs the generated phone numbers into a table (mnsu_generated_firm_phone).  
+'''
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

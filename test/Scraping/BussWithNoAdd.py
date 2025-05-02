@@ -1,3 +1,12 @@
+'''
+Written by Spring 2025 MNSU project team
+This script generates addresses for businesses that don't have an address.
+It does the following:
+ 1. Pulls data from the business, email and url table on the firm id where the address are missing.
+ 2. Logs the processed firm_ids (Business Ids) in a processed table (mnsu_firm_processed) to keep track of the processed firms.
+ 3. Scrape addresses from the urls with helper functions.
+ 4. Logs the generated addresses into a table (mnsu_generated_firm_address).  
+'''
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -69,8 +78,8 @@ def addScrape(urlDf, emlDf):
         firm_id = row['firm_id']
         
         #Scrape email data
-        scrapedEmail = extract_adress_data(firm_id, url)
-        print(scrapedEmail, url)
+        scrapedAddress = extract_address_data(firm_id, url)
+        print(scrapedAddress, url)
         
         #Append the scraped emails to the email DataFrame
         #for now, we're only considering 2 emails per firm ID
