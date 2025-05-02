@@ -1,5 +1,5 @@
 '''
-
+Written by Spring 2025 MNSU project team
 This is the generate_url file that generates urls from either the business name or the email given.
 It does the following:
  1. Pulls data from the business, email and url table on the firm id where the urls are missing.
@@ -7,7 +7,6 @@ It does the following:
  3. Generates the URLs from business names with helper functions.
  4. Logs the generated URLs into a table (mnsu_generated_url).
  5. Logs the script id and script activity id to its various tables to keep track of all the script activities.
- 
 '''
 
 import os
@@ -23,6 +22,7 @@ from urllib.parse import urlparse
 import sqlalchemy as sa
 
 
+#Script configuration
 SCRIPT_NAME = 'generating_urls_final_s2025'
 SCRIPT_VERSION = '1.0.3'
 VERSION_NOTE = None         # put version note string here, otherwise None
@@ -30,6 +30,8 @@ CONNECT_USER = 'ABDI'
 CONNECT_DB = 'MNSU'
 CONNECT_INSTANCE = 'SANDBOX'
 CONNECT_SCHEMA = 'spring2025'
+
+#Database table names
 SCRIPT_TABLE = 'mnsu_script'
 SCRIPT_ACTIVITY_TABLE = 'mnsu_script_activity'
 PROCESSED_TABLE = 'mnsu_firm_processed'
@@ -38,6 +40,8 @@ NAME_TABLE = 'tblfirms_firm_companyname'
 EMAIL_TABLE = 'tblfirms_firm_email'
 URL_TABLE = 'tblfirms_firm_url'
 GENERATED_URL_TABLE = 'mnsu_generated_firm_url'
+
+#batch Processing configuration
 BATCH_SIZE = 300
 MNSU_URL_ID = 1
 
@@ -70,21 +74,19 @@ def logGeneratedUrlToDB(engine,processedRows,saId):
     :return: None
     """
     assert isinstance(processedRows,pd.core.frame.DataFrame)
+    
+    #Select required columns
     processedRows = processedRows[['firm_id','url','domain', 'main', 'url_type_id', 'url_status_id']]
     
     processedRows[['mnsu_script_activity_id']] = saId
     processedRows[['note']] = 'Testing generated URLs'
     processedRows[['confidence_level']] = 1
-    #print(processedRows.columns)
-
-    
+    #Save to database
     processedRows.to_sql(name=GENERATED_URL_TABLE,
                                 con=engine,
                                 schema=CONNECT_SCHEMA,
                                 if_exists='append',
                                 index=False)
-
-
 def process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE):
     """
     Pull, process, and put the URLs in batches into the database.
@@ -107,6 +109,7 @@ def process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE):
         print("Pulling data from database...")
         dfs = getBusinessDataBatch(con, mnsuMeta, sId, batch_size)
         
+        #Check if there's no more data to process
         if not dfs or dfs[BUSINESS_TABLE].empty:
             print("\n=== Process Complete ===")
             print(f"Total records processed: {processed_count}")
@@ -128,44 +131,41 @@ def process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE):
         # Remove duplicates
         business_email_df = business_email_df.drop_duplicates(subset='firm_id')
 
-        # Process URLs for this batch remove from the fuction itself print
+        #Generate and process URLs
         update_df = main_scrape_urls(business_email_df)
-        
-        # Extract domain and update status
         update_df['domain'] = update_df['url'].apply(getDomainName)
         update_df['url_status_id'] = update_df['status_code'].apply(lambda x: 1 if x == 200 else 3)
 
         # Push this batch immediately
         print("Pushing generated URLs to database...")
         logGeneratedUrlToDB(con, update_df, saId)
-
-        # Log processed businesses
+        #log processed businesses
         print("Logging processed businesses...")
         logProcessedToDB(con, business_df, sId, saId)
         
+        #Update progress
         processed_count += len(business_df)
         print(f"\n✓ Batch {(processed_count // batch_size)} completed")
         print(f"✓ Records in this batch: {len(business_df)}")
         print(f"✓ Total records processed: {processed_count}")
-        
 
-# Running the code
+#running the code
 if __name__=='__main__':
     
     print("\n=== URL Generation Script Starting ===")
-    # Load Environment Variables
+    #Load Environment Variables
     load_dotenv()
-    # Create connection
+    #Create connection
     con = ci.connect(db='MNSU', instance='SANDBOX', user='ABDI', engine='sqlalchemy')
 
-   # Create a metadata object
+   #Create a metadata object
     mnsuMeta = sa.schema.MetaData(schema=CONNECT_SCHEMA)
       
-    # Get the script ID and script activity ID
+    #Get the script ID and script activity ID
     sId = getScriptId(con, mnsuMeta)
     saId = initiateScriptActivity(con, mnsuMeta,sId) 
     print(sId)
-    # Get the business data 
+    #Get the business data 
     try:
         process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE)
         
