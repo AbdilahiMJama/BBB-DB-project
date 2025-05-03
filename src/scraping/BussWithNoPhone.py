@@ -10,13 +10,13 @@ It does the following:
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import connect_iabbb as ci
+import config.connect_iabbb as ci
 from setup import getBusWoutPhone, getScriptId, getExistingScriptId, initiateScriptActivity, terminateScriptActivity, logProcessedToDB
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import MetaData
-from main_url_scrape import main_scrape_urls
-from data_extraction import extract_email_data, extract_phone_data, contains_phone_number
+from scripts.main_url_scrape import main_scrape_urls
+from scripts.data_extraction import extract_email_data, extract_phone_data, contains_phone_number
 import sqlalchemy as sa
 from sqlalchemy import MetaData
 
@@ -150,7 +150,7 @@ def processPhonesInBatches(con,mnsuMeta,sId,saId,batch_size=BATCH_SIZE):
         print(f"✓ Records in this batch: {len(business_df)}")
         print(f"✓ Total records processed: {processed_count}")
 
-if __name__ == '__main__':
+def main():
     print("\n=== Phone Generation Script Starting ===")
     #Setup environment
     load_dotenv()
@@ -176,3 +176,6 @@ if __name__ == '__main__':
         raise
     finally:
         print("\n=== Script Execution Finished ===")
+
+if __name__ == '__main__':
+    main()

@@ -1,16 +1,6 @@
-
-
-import re
-import pandas as pd
-import time
-import requests
-from bs4 import BeautifulSoup
-from elis_functions import cleanEmail
-from googlesearch import search
-
-
 """
 For CODE REVIEWER:
+DISCLAIMER:This is code from the previous teams with modifications made by Spring 25 team to match its needs
 We have two functions which build new urls for us
 - build_url_from_email:
     - This function relies on the specific row in our csv file HAVING an EMAIL, but MISSING a URL
@@ -23,6 +13,14 @@ We have two functions which build new urls for us
         - We may modify it if we find these urls are "bad" (aren't related to the company)
     - return the top url of choice from our algo
 """
+
+import re
+import pandas as pd
+import time
+import requests
+from bs4 import BeautifulSoup
+from elis_functions import cleanEmail
+from googlesearch import search
 
 # list of domain names we don't want
 bad_domain_names = ['yahoo.com', 'gmail.com', "hotmail.com", "icloud.com", "comcast.net", "GMAIL.COM", "ICLOUD.COM",
@@ -51,6 +49,7 @@ def build_url_from_email(email):
 
 def search_urls(df):
     """
+    The Spring 2025 changed the time.sleep to 10seconds.
     Given a dataframe containing rows with NO email OR website, search the web for urls for that row (business)
     :param df: list of urls
     :return: a list of new websites found via search which we should append to the dataframe OUTSIDE of the function
@@ -74,9 +73,11 @@ def search_urls(df):
 
 def get_url_from_search(company_name, rating_sites, business_id, company_city_state=""):
     """
+    The Spring 2025 team changed the time.sleep to five seconds and ensured
+    that the function returns the business id and URL.
     Return company's URL given company name
     :param company_name: the name of the company
-    :return: company's URL if found, else return ''
+    :return: company's and business id URL if found, else return ''
     """
     website = ""
     if pd.isnull(company_city_state):

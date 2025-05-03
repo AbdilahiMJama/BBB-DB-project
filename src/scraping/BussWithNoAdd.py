@@ -10,7 +10,7 @@ It does the following:
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import connect_iabbb as ci
+import config.connect_iabbb as ci
 from setup import getBusWoutEml
 import pandas as pd
 from dotenv import load_dotenv
@@ -42,7 +42,6 @@ BATCH_SIZE = 10
 
 load_dotenv()
 
-DB = os.environ.get("DB")
 #Create connection
 con = ci.connect(db='MNSU', instance='SANDBOX', user='AMANUEL', engine='sqlalchemy')
 

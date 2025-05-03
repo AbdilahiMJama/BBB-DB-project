@@ -4,9 +4,10 @@ Created on Fri Feb 21 10:25:37 2025
 
 @author: Eli Johnson
 """
-
-
-import connect_iabbb as ci
+import sys 
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
+import config.connect_iabbb as ci
 import pandas as pd
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta

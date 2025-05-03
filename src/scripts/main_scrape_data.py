@@ -1,3 +1,7 @@
+"""
+DISCLAIMER:This is code written by the previous teams and used by the Spring 25 team"
+"""
+
 from data_extraction import extract_email_data, extract_phone_data
 import pandas as pd
 

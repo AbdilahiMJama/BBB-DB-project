@@ -1,3 +1,9 @@
+"""
+This is code written by the previous team and used by the Spring 25 team.
+"""
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from create_urls import *
 from get_status_codes import *
 import pandas as pd
@@ -17,7 +23,7 @@ def main_scrape_urls(df):
         if url_exists(row):
             continue
         website = url_from_email(row)
-        print("From email: ",website)
+        
 
         # If a valid URL is found, add the row to the email results dataframe
         if website:
@@ -28,7 +34,6 @@ def main_scrape_urls(df):
     df = get_statuscode_forPandas(df) 
     # Check the status codes of the URLs
     # If the status code is 200, update the 'Website' column of the input dataframe with the valid URL
-    # Remove this line.(figure out how to keep the processed rows.)
     df = df.loc[df['status_code'] == 200]
     return df
 

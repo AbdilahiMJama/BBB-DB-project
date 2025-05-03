@@ -1,14 +1,6 @@
-import bs4
-from bs4 import BeautifulSoup, Comment
-import requests
-import re
-import whois
-from urllib.parse import urlparse
-import pandas as pd
-
-
 """
 For CODE REVIEWER:
+DISCLAIMER: This is code from the previous teams with modifications made by Spring 25 team to match its needs.
 This file is used to hold all our functions which extract data from a url
 There are two types of functions you see here, listed below
 - functions which start with "contains"
@@ -20,6 +12,13 @@ There are two types of functions you see here, listed below
     - Return the data type(s) we found from that single html/soup
 """
 
+import bs4
+from bs4 import BeautifulSoup, Comment
+import requests
+import re
+import whois
+from urllib.parse import urlparse
+import pandas as pd
 
 def contains_contacts_page(html):
     """
@@ -268,6 +267,7 @@ def url_is_review_page(url):
 
 def extract_phone_data(business_id, url):
     """
+    The Spring 25 team added a timeout to ensure that the program doesn't stall.
     Finds phone numbers in the given url's webpage
     :param url: url to search for phone numbers in
     :return: dictionary of all phone numbers found in the given url's webpage
@@ -303,6 +303,7 @@ def extract_phone_data(business_id, url):
 
 def extract_email_data(business_id, url):
     """
+    The Spring 25 team added headers and a timeout.
     Finds email addresses in the given url's webpage
     :param business_id: id associated with a business
     :param url: url to search for emails in

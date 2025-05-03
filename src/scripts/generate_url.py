@@ -12,11 +12,12 @@ It does the following:
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-import connect_iabbb as ci
+import config.connect_iabbb as ci
 from setup import getBusinessDataBatch, getScriptId, getExistingScriptId, initiateScriptActivity, terminateScriptActivity, logProcessedToDB
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import MetaData
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
 from main_url_scrape import main_scrape_urls
 from urllib.parse import urlparse
 import sqlalchemy as sa
@@ -149,9 +150,8 @@ def process_urls_in_batches(con, mnsuMeta, sId, saId, batch_size=BATCH_SIZE):
         print(f"✓ Records in this batch: {len(business_df)}")
         print(f"✓ Total records processed: {processed_count}")
 
-#running the code
-if __name__=='__main__':
-    
+
+def main():
     print("\n=== URL Generation Script Starting ===")
     #Load Environment Variables
     load_dotenv()
@@ -180,3 +180,9 @@ if __name__=='__main__':
         raise
     finally:
         print("\n=== Script Execution Finished ===")
+
+
+#running the code
+if __name__=='__main__':
+    main()
+    
