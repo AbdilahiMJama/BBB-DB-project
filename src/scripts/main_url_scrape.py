@@ -24,7 +24,6 @@ def main_scrape_urls(df):
             continue
         website = url_from_email(row)
         
-
         # If a valid URL is found, add the row to the email results dataframe
         if website:
             df.loc[index, 'url'] = website
@@ -74,6 +73,7 @@ def url_from_email(row):
 
 def url_from_business_name(row):
     """
+    This function was modified by the Spring 25 team and the the state or postal code removed.
     Given a row, attempts to find a URL from the BusinessName column.
     Returns the URL if it is valid, otherwise returns None.
     """
@@ -87,7 +87,6 @@ def url_from_business_name(row):
     if isinstance(business_name, str):
         website, business_id = get_url_from_search(business_name, rating_sites, business_id)
         if website:
-            print(website)
             return website
     return None
 

@@ -62,15 +62,12 @@ def emlScrape(urlDf, emlDf):
         
         #Scrape email data
         scrapedEmail = extract_email_data(firm_id, url)
-        print(scrapedEmail, url)
-        
         #Append the scraped emails to the email DataFrame
         #for now, we're only considering 2 emails per firm ID
         i = 0
         while i < 2 and scrapedEmail != None and  i < len(scrapedEmail):
             #Check if the email is already in the DataFrame
             if scrapedEmail[i] not in emlDf['email'].values:
-                print(True)
                 #Create a new row as a DataFrame
                 new_row = pd.DataFrame({'firm_id': [firm_id], 'email': [scrapedEmail[i]]})
                 

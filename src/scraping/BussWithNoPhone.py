@@ -58,35 +58,25 @@ def phoneScrape(urlDf, phoneDf):
         emlDf (pd.DataFrame): DataFrame to store scraped email addresses.
         
     """
-
     for index, row in urlDf.iterrows():
         url = row['url']
         firm_id = row['firm_id']
         
         #Scrape phone data
         scrapedPhone = extract_phone_data(firm_id, url)
-        print(scrapedPhone, url)
-        
         #Process scraped phones
         #Only considering 2 phones per firm ID
         i = 0
         while i < 2 and scrapedPhone != None and  i < len(scrapedPhone):
             #Check if phone exists
             if scrapedPhone[i] not in phoneDf['phone'].values:
-                print(True)
-                
                 new_row = pd.DataFrame({'firm_id': [firm_id], 'phone': [scrapedPhone[i]]})
-                
-                
                 phoneDf = pd.concat([phoneDf, new_row], ignore_index=True)
-
                 i += 1
             else: 
                 i += 1
                 continue
-
     return phoneDf
-
 
 def logGeneratedPhoneToDB(engine, processedRows, saId):
     """
