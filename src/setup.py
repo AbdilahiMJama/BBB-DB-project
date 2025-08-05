@@ -171,8 +171,8 @@ def getBusinessDataBatch(engine,metadata,scriptId,batchSize=BATCH_SIZE):
             ~subq2.exists()).filter(
                 businessTable.c.active).filter(
                     businessTable.c.outofbusiness_status.is_(None)).filter(
-                        businessTable.c.createdon < aMonthAgo).order_by(
-                            businessTable.c.createdon.desc()).limit(
+                        businessTable.c.CreatedOn < aMonthAgo).order_by(
+                            businessTable.c.CreatedOn.desc()).limit(
                             batchSize)
 
     with engine.connect() as con:
@@ -262,8 +262,8 @@ def getBusWoutEml(engine, metadata, scriptId, batchSize=BATCH_SIZE):
                 subq3.exists()).filter(    
                 businessTable.c.active).filter(
                     businessTable.c.outofbusiness_status.is_(None)).filter(
-                        businessTable.c.createdon < aMonthAgo).order_by(
-                            businessTable.c.createdon.desc()).limit(batchSize)
+                        businessTable.c.CreatedOn < aMonthAgo).order_by(
+                            businessTable.c.CreatedOn.desc()).limit(batchSize)
 
     with engine.connect() as con:
         
@@ -331,8 +331,8 @@ def getBusWoutPhone(engine, metadata, scriptId, batchSize=BATCH_SIZE):
                 subq3.exists()).filter(  # Ensure the firm has a URL
         businessTable.c.active).filter(
         businessTable.c.outofbusiness_status.is_(None)).filter(
-        businessTable.c.createdon < aMonthAgo).order_by(
-        businessTable.c.createdon.desc()).limit(batchSize)
+        businessTable.c.CreatedOn < aMonthAgo).order_by(
+        businessTable.c.CreatedOn.desc()).limit(batchSize)
 
     with engine.connect() as con:
         
@@ -397,8 +397,8 @@ def getBusWoutAddress(engine, metadata, scriptId, batchSize=BATCH_SIZE):
         subq2).filter(  # Ensure the firm has a URL
         businessTable.c.active).filter(
         businessTable.c.outofbusiness_status.is_(None)).filter(
-        businessTable.c.createdon < aMonthAgo).order_by(
-        businessTable.c.createdon.desc()).limit(batchSize)
+        businessTable.c.CreatedOn < aMonthAgo).order_by(
+        businessTable.c.CreatedOn.desc()).limit(batchSize)
 
     with engine.connect() as con:
         
